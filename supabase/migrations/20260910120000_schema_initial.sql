@@ -109,8 +109,12 @@ comment on table public.entitlements is
 -- ── Transactions ───────────────────────────────────────────────────────────
 -- Détail du flux et des six cas traités : voir la migration de la Phase 5.
 
+-- `processing` est l'état intermédiaire du verrou d'idempotence : le webhook fait
+-- passer la ligne de `pending` à `processing` par un UPDATE conditionnel, et un rejeu
+-- ne trouve plus de ligne au statut attendu. Le verrou est ainsi atomique côté base,
+-- et non une lecture suivie d'une écriture.
 create type public.payment_status as enum (
-  'pending', 'succeeded', 'failed', 'expired', 'rejected'
+  'pending', 'processing', 'succeeded', 'failed', 'expired', 'rejected'
 );
 
 create table public.transactions (

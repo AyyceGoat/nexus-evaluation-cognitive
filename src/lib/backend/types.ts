@@ -28,7 +28,13 @@ export interface PassationResume {
   rapportDebloque: boolean;
 }
 
-export type StatutPaiement = 'pending' | 'succeeded' | 'failed' | 'expired' | 'rejected';
+export type StatutPaiement =
+  | 'pending'
+  | 'processing'
+  | 'succeeded'
+  | 'failed'
+  | 'expired'
+  | 'rejected';
 
 export interface Transaction {
   id: string;

@@ -14,7 +14,14 @@ import reactHooks from 'eslint-plugin-react-hooks';
 // les corrections.
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'public/**'],
+    // `supabase/functions/**` cible le runtime Deno : globals différents (Deno.env,
+    // Deno.serve), imports par URL, et ces fichiers sont hors du `include` de
+    // tsconfig.json. Les linter ici produirait du bruit sans rien vérifier d'utile.
+    //
+    // ANGLE MORT ASSUMÉ ET CONSIGNÉ : ces fichiers ne sont donc ni typecheckés ni
+    // lintés par ce dépôt. Ils le seront par `deno check` au déploiement. Voir
+    // docs/JOURNAL.md et docs/RETOUR.md.
+    ignores: ['dist/**', 'node_modules/**', 'public/**', 'supabase/functions/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

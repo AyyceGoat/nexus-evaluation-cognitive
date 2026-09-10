@@ -1,11 +1,16 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/auth';
+import { CHEMINS } from '../../app/navigation';
+import { DEVISE, MONTANT_DEBLOCAGE, ouvrirPaiement, paiementEnLocal } from '../../lib/paiement';
+import { Button } from '../ui/Button';
 import { AptitudeProfile } from './AptitudeProfile';
 import { IntervalBar } from './IntervalBar';
 import { IQCertificate } from './IQCertificate';
 import { MatrixRenderer } from './MatrixRenderer';
 import { APTITUDE_LABEL } from '../../lib/iq/types';
 import type { IQItem, IQReport } from '../../lib/iq/types';
-import { AlertTriangle, ChevronDown, ChevronUp, Lock, RotateCcw } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 interface IQResultsViewProps {
   report: IQReport;
@@ -142,7 +147,10 @@ export function IQResultsView({ report, items, onRestart, debloque = false }: IQ
       {tab === 'corrections' && (
         <section>
           {!unlocked ? (
-            <LockedNotice label="les corrections détaillées de vos 35 questions" />
+            <LockedNotice
+              label={`les corrections détaillées de vos ${report.itemCount} questions`}
+              passationId={report.sessionId}
+            />
           ) : (
             <ul className="space-y-3">
               {report.responses.map((response, position) => {
@@ -242,7 +250,7 @@ export function IQResultsView({ report, items, onRestart, debloque = false }: IQ
       {tab === 'attestation' && (
         <section>
           {!unlocked ? (
-            <LockedNotice label="votre attestation de passation" />
+            <LockedNotice label="votre attestation de passation" passationId={report.sessionId} />
           ) : (
             <IQCertificate report={report} />
           )}
@@ -270,15 +278,77 @@ export function IQResultsView({ report, items, onRestart, debloque = false }: IQ
  * l'ancienne modale simulait la transaction. Le message dit où en est la fonctionnalité
  * plutôt que de faire semblant de vendre.
  */
-function LockedNotice({ label }: { label: string }) {
+function LockedNotice({ label, passationId }: { label: string; passationId: string }) {
+  const { utilisateur } = useAuth();
+  const navigate = useNavigate();
+  const [ouverture, setOuverture] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function debloquer() {
+    if (!utilisateur) return;
+    setErreur(null);
+    setOuverture(true);
+    try {
+      const checkout = await ouvrirPaiement(utilisateur.id, passationId);
+      navigate(CHEMINS.paiement(checkout.reference));
+    } catch (e) {
+      setOuverture(false);
+      setErreur(
+        e instanceof Error && e.message
+          ? e.message
+          : 'Le paiement n’a pas pu être ouvert. Réessayez dans un instant.'
+      );
+    }
+  }
+
   return (
-    <div className="p-6 sm:p-8 rounded-2 border border-ardoise/50 bg-graphite/40 max-w-lg">
-      <Lock className="w-6 h-6 text-brume mb-4" aria-hidden="true" />
-      <h2 className="font-titre text-lg font-bold text-craie mb-2">Section réservée</h2>
-      <p className="text-sm text-brume leading-relaxed">
-        Le rapport complet comprend {label}. Le paiement par mobile money est en cours
-        d’intégration : cette section s’ouvrira dès qu’il sera opérationnel.
+    <div className="max-w-lg border-l-2 border-ardoise py-6 pl-6">
+      <h2 className="text-t3 text-craie">Section réservée</h2>
+      <p className="mesure-texte mt-3 text-petit text-brume">
+        Le rapport complet comprend {label}. Le déblocage coûte{' '}
+        <span className="nombres text-craie">
+          {MONTANT_DEBLOCAGE} {DEVISE}
+        </span>
+        , une seule fois, par mobile money.
       </p>
+
+      {!utilisateur ? (
+        <div className="mt-5 flex flex-col gap-3">
+          <p className="mesure-texte text-petit text-brume">
+            Le déblocage est rattaché à un compte, pour que vous le retrouviez depuis
+            n’importe quel appareil.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to={CHEMINS.inscription}>
+              <Button variant="principal">Créer mon compte</Button>
+            </Link>
+            <Link to={CHEMINS.connexion}>
+              <Button variant="secondaire">Me connecter</Button>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 flex flex-col gap-3">
+          <div>
+            <Button variant="principal" onClick={() => void debloquer()} disabled={ouverture}>
+              {ouverture
+                ? 'Ouverture du paiement…'
+                : `Débloquer pour ${MONTANT_DEBLOCAGE} ${DEVISE}`}
+            </Button>
+          </div>
+          {erreur && (
+            <p role="alert" className="text-petit text-alerte">
+              {erreur}
+            </p>
+          )}
+          {paiementEnLocal && (
+            <p className="mesure-texte text-micro text-brume">
+              Aucun agrégateur n’est configuré : le paiement passera par le guichet de test,
+              qui ne déplace pas d’argent.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

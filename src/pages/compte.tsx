@@ -133,6 +133,9 @@ export function Parametres() {
 
 const LIBELLE_STATUT: Record<Transaction['statut'], string> = {
   pending: 'En attente',
+  // Verrou serveur, de durée très brève. Affiché comme « en attente » plutôt que
+  // d'exposer un mot de vocabulaire interne.
+  processing: 'En attente',
   succeeded: 'Réussi',
   failed: 'Échoué',
   expired: 'Expiré',

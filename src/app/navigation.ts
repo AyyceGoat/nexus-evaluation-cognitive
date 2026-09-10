@@ -55,4 +55,5 @@ export const CHEMINS = {
   parametres: '/parametres',
   transactions: '/transactions',
   rapport: (id: string) => `/rapport/${id}`,
+  paiement: (reference: string) => `/paiement/${encodeURIComponent(reference)}`,
 } as const;

@@ -171,3 +171,86 @@ vérifié le typecheck, le lint, les 35 tests, le build, et que les onze routes 
 HTTP 200 sur le build de production. **Je n'ai pas vu une seule page s'afficher**, ni
 cliqué un seul formulaire. Le parcours inscription → onboarding → tableau de bord est
 écrit et typé, il n'est pas testé à la main.
+
+---
+
+## [Phase 5] 20:32 — Réponse à ta vérification bloquante sur les frais
+**Ce qui s'est passé :** `docs.cinetpay.com` ne résout pas depuis cette machine (échec
+DNS), donc je n'ai lu aucune page de la documentation officielle directement. J'ai
+travaillé sur deux sources accessibles : le dépôt GitHub officiel de CinetPay, et les
+citations textuelles de leur documentation renvoyées par le moteur de recherche.
+
+**Ce que j'ai trouvé :** **pas de commission fixe par transaction.** Le montant minimum
+de 100 XOF et l'obligation d'être multiple de 5 concernent la transaction elle-même, pas
+un plancher de frais. Sur 500 FCFA, la commission ivoirienne affichée à 3,5 % fait
+**17,50 F**, soit 3,5 % — pas les 20 % que tu craignais. **Ta décision tient.**
+
+Un piège de vocabulaire à connaître : les « montants minimums » qu'on trouve chez
+CinetPay sont ceux du **reversement** (payout), pas de l'**encaissement** (pay-in). Deux
+grilles distinctes, et c'est la seconde qui nous concerne.
+
+**Sur Wave en direct :** l'économie serait de 10 FCFA par transaction (1,5 % contre
+3,5 %). Je recommande de ne pas commencer par là : dix francs de marge ne compensent pas
+de refuser le paiement à quiconque n'a pas Wave, et Orange Money reste très installé en
+Côte d'Ivoire. L'architecture permet d'ajouter Wave comme second provider plus tard.
+
+**Certitude, sans enjoliver :** haute sur le minimum de 100 XOF et le multiple de 5, et
+sur le mécanisme HMAC ; moyenne sur les 3,5 % ; **basse sur la liste des pièces exigées**
+à l'ouverture du compte, que je n'ai pas pu lire. Tout est ventilé dans `PAIEMENT.md` §1
+et §5.
+
+---
+
+## [Phase 5] 20:31 — Bug trouvé dans mon propre code de la veille
+**Ce qui s'est passé :** le verrou d'idempotence du webhook fait passer la transaction de
+`pending` à `processing` par un `UPDATE … WHERE status = 'pending'`. Or `processing`
+n'existait pas dans l'énumération `payment_status` que j'avais écrite en Phase 4 : la
+requête aurait échoué au premier webhook, et le verrou n'aurait jamais fonctionné.
+
+**Ce que j'ai décidé :** ajouté `processing` à l'énumération de la migration — jamais
+appliquée, donc modifiable sans migration corrective — et aligné les types côté front.
+L'écran affiche « En attente » pour cet état plutôt que d'exposer un mot de vocabulaire
+interne.
+
+**Pourquoi je le note :** ce bug n'aurait été visible qu'au premier vrai webhook, en
+production, sur un paiement réel. Il illustre pourquoi les Edge Functions non
+typecheckées sont un angle mort.
+
+---
+
+## [Phase 5] 20:30 — Angle mort assumé : les fonctions Deno
+**Ce qui s'est passé :** les deux Edge Functions ciblent Deno — `Deno.serve`, `Deno.env`,
+imports par URL. ESLint les signalait en masse, et `tsconfig.json` ne les inclut pas.
+
+**Ce que j'ai décidé :** les exclure explicitement d'ESLint, avec un commentaire qui dit
+que c'est un angle mort et pourquoi. Je n'ai pas installé Deno pour les vérifier : ce
+n'était pas dans le périmètre, et l'installation ajoute une dépendance système.
+
+**Ce qu'il reste à faire quand tu seras là :** `deno check supabase/functions/**/*.ts`
+avant le premier déploiement. Ces deux fichiers sont les seuls du dépôt que rien ne
+vérifie automatiquement.
+
+---
+
+## [Phase 5] 20:33 — Décisions prises à ta place
+1. **Le guichet de test remplace la fausse attente.** En mode sandbox, l'écran de
+   paiement ne fait pas semblant d'attendre un téléphone qui ne sonnera pas : il demande
+   quelle issue jouer, et chaque bouton envoie un webhook **réellement signé** au
+   provider. Le chemin de code exercé est donc celui de la production, signature et
+   idempotence comprises. C'est visible seulement quand aucun agrégateur n'est configuré.
+2. **La porte reste fermée, et le dit mieux.** Conformément à ta réponse 1 : la section
+   réservée annonce le prix, propose la création de compte si l'utilisateur n'en a pas,
+   et précise en mode local qu'aucun agrégateur n'est configuré. Rien ne prétend
+   fonctionner.
+3. **Le paiement exige un compte**, alors que l'évaluation reste libre : c'est le compte
+   qui porte le droit d'accès, donc c'est lui qui permet de retrouver son achat sur un
+   autre appareil.
+4. **TTL fixé à 30 minutes.** Assez long pour un paiement mobile money confirmé par
+   USSD, assez court pour qu'un webhook très tardif ne crédite pas un rapport déjà repayé.
+5. **Rate limiting à 5 transactions ouvertes par utilisateur et par 10 minutes.**
+
+**Ce que je n'ai pas pu vérifier :** rien n'a été exécuté contre CinetPay — aucune
+requête, aucun webhook réel. Les 27 tests valident le code contre ses propres
+suppositions, ce qui n'est pas la même chose que le valider contre le service. Le point
+de défaillance le plus probable reste l'ordre des seize champs du HMAC : à relire sur la
+page officielle avant la mise en production.
