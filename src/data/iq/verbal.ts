@@ -1,0 +1,321 @@
+import { textItem } from './_builders';
+import type { IQItem } from '../../lib/iq/types';
+
+const q = (a: string, b: string, c: string) =>
+  `${a} est à ${b} ce que ${c} est à…`;
+
+export const verbalItems: IQItem[] = [
+  textItem('verbal', {
+    id: 'ver-01',
+    difficulty: 1,
+    prompt: q('Chien', 'chiot', 'chat'),
+    options: ['Félin', 'Matou', 'Chaton', 'Portée', 'Souris'],
+    correctIndex: 2,
+    explanation: 'La relation est « adulte → petit ». Le petit du chat est le chaton.',
+    reasoning: ['Un chiot est un chien jeune.', 'Le petit du chat porte le nom de chaton.'],
+    expectedSeconds: 20,
+  }),
+  textItem('verbal', {
+    id: 'ver-02',
+    difficulty: 1,
+    prompt: q('Oiseau', 'voler', 'poisson'),
+    options: ['Écaille', 'Nager', 'Branchie', 'Océan', 'Plonger'],
+    correctIndex: 1,
+    explanation: 'La relation est « animal → son mode de déplacement ». Le poisson nage.',
+    reasoning: [
+      "Voler est la façon dont l'oiseau se déplace.",
+      'Le poisson se déplace en nageant.',
+      "« Plonger » est un mouvement ponctuel, pas le mode de déplacement propre à l'espèce.",
+    ],
+    expectedSeconds: 22,
+  }),
+  textItem('verbal', {
+    id: 'ver-03',
+    difficulty: 1,
+    prompt: q('Chaud', 'froid', 'jour'),
+    options: ['Soleil', 'Matin', 'Lumière', 'Nuit', 'Midi'],
+    correctIndex: 3,
+    explanation: 'La relation est celle de deux contraires. Le contraire du jour est la nuit.',
+    reasoning: ['Chaud et froid sont opposés.', "L'opposé du jour est la nuit."],
+    expectedSeconds: 20,
+  }),
+  textItem('verbal', {
+    id: 'ver-04',
+    difficulty: 1,
+    prompt: q('Livre', 'lire', 'musique'),
+    options: ['Danser', 'Note', 'Écouter', 'Instrument', 'Chanter'],
+    correctIndex: 2,
+    explanation: "La relation est « objet → façon d'en profiter ». On écoute la musique.",
+    reasoning: ['Un livre se lit.', 'La musique s\'écoute.'],
+    expectedSeconds: 22,
+  }),
+  textItem('verbal', {
+    id: 'ver-05',
+    difficulty: 1,
+    prompt: q('Faim', 'manger', 'soif'),
+    options: ['Eau', 'Verre', 'Sécheresse', 'Boire', 'Désert'],
+    correctIndex: 3,
+    explanation: 'La relation est « besoin → action qui le comble ». La soif se comble en buvant.',
+    reasoning: ['La faim se comble en mangeant.', 'La soif se comble en buvant.'],
+    expectedSeconds: 20,
+  }),
+
+  textItem('verbal', {
+    id: 'ver-06',
+    difficulty: 2,
+    prompt: q('Abeille', 'ruche', 'fourmi'),
+    options: ['Colonie', 'Fourmilière', 'Terrier', 'Nid', 'Tunnel'],
+    correctIndex: 1,
+    explanation: "La relation est « insecte → nom propre de son habitat ». Celui de la fourmi est la fourmilière.",
+    reasoning: [
+      "La ruche est l'habitat de l'abeille.",
+      "« Colonie » désigne le groupe, pas le lieu.",
+    ],
+    expectedSeconds: 30,
+  }),
+  textItem('verbal', {
+    id: 'ver-07',
+    difficulty: 2,
+    prompt: q('Médecin', 'hôpital', 'professeur'),
+    options: ['Élève', 'Savoir', 'Craie', 'Livre', 'École'],
+    correctIndex: 4,
+    explanation: 'La relation est « métier → lieu de travail ». Le professeur exerce à l\'école.',
+    reasoning: [
+      "L'hôpital est le lieu où exerce le médecin.",
+      "« Élève » est la personne servie, pas le lieu.",
+    ],
+    expectedSeconds: 30,
+  }),
+  textItem('verbal', {
+    id: 'ver-08',
+    difficulty: 2,
+    prompt: q('Pinceau', 'peintre', 'marteau'),
+    options: ['Clou', 'Menuisier', 'Bois', 'Atelier', 'Outil'],
+    correctIndex: 1,
+    explanation: 'La relation est « outil → personne qui s\'en sert ». Le marteau est l\'outil du menuisier.',
+    reasoning: [
+      'Le pinceau est manié par le peintre.',
+      "« Clou » est ce sur quoi le marteau agit, pas celui qui le tient.",
+    ],
+    expectedSeconds: 32,
+  }),
+  textItem('verbal', {
+    id: 'ver-09',
+    difficulty: 2,
+    prompt: q('Kilomètre', 'distance', 'litre'),
+    options: ['Masse', 'Surface', 'Volume', 'Poids', 'Longueur'],
+    correctIndex: 2,
+    explanation: 'La relation est « unité → grandeur mesurée ». Le litre mesure un volume.',
+    reasoning: [
+      'Le kilomètre mesure une distance.',
+      'Le litre mesure une capacité, donc un volume.',
+    ],
+    expectedSeconds: 30,
+  }),
+  textItem('verbal', {
+    id: 'ver-10',
+    difficulty: 2,
+    prompt: q('Auteur', 'roman', 'cinéaste'),
+    options: ['Caméra', 'Acteur', 'Écran', 'Film', 'Scénario'],
+    correctIndex: 3,
+    explanation: "La relation est « créateur → œuvre achevée ». Le cinéaste produit un film.",
+    reasoning: [
+      "Le roman est l'œuvre de l'auteur.",
+      "« Scénario » est une étape de travail, pas l'œuvre achevée.",
+    ],
+    expectedSeconds: 32,
+  }),
+
+  textItem('verbal', {
+    id: 'ver-11',
+    difficulty: 3,
+    prompt: q('Sculpteur', 'statue', 'compositeur'),
+    options: ['Orchestre', 'Piano', 'Partition', 'Symphonie', 'Musicien'],
+    correctIndex: 3,
+    explanation: "La relation est « créateur → œuvre ». L'œuvre du compositeur est la symphonie.",
+    reasoning: [
+      "La statue est l'œuvre du sculpteur.",
+      "« Partition » est le support matériel ; « orchestre » l'interprète.",
+    ],
+    expectedSeconds: 42,
+  }),
+  textItem('verbal', {
+    id: 'ver-12',
+    difficulty: 3,
+    prompt: q('Graine', 'arbre', 'étincelle'),
+    options: ['Fumée', 'Incendie', 'Allumette', 'Bois', 'Chaleur'],
+    correctIndex: 1,
+    explanation: "La relation est « origine minuscule → aboutissement considérable ». L'étincelle donne l'incendie.",
+    reasoning: [
+      "La graine contient en germe l'arbre entier.",
+      "« Fumée » est une conséquence secondaire, pas l'aboutissement.",
+    ],
+    expectedSeconds: 45,
+  }),
+  textItem('verbal', {
+    id: 'ver-13',
+    difficulty: 3,
+    prompt: q('Silence', 'bruit', 'obscurité'),
+    options: ['Nuit', 'Ombre', 'Lumière', 'Noir', 'Aveuglement'],
+    correctIndex: 2,
+    explanation:
+      "La relation est « absence → chose absente ». Le silence est l'absence de bruit, l'obscurité celle de lumière.",
+    reasoning: [
+      'Le silence se définit par ce qui manque : le bruit.',
+      "« Ombre » est une obscurité partielle, pas ce dont l'obscurité est l'absence.",
+    ],
+    expectedSeconds: 45,
+  }),
+  textItem('verbal', {
+    id: 'ver-14',
+    difficulty: 3,
+    prompt: q('Thermomètre', 'température', 'baromètre'),
+    options: ['Vent', 'Humidité', 'Altitude', 'Chaleur', 'Pression'],
+    correctIndex: 4,
+    explanation: 'La relation est « instrument → grandeur mesurée ». Le baromètre mesure la pression.',
+    reasoning: [
+      'Le thermomètre mesure la température.',
+      "L'altitude se déduit de la pression mais n'est pas ce que l'instrument mesure.",
+    ],
+    expectedSeconds: 45,
+  }),
+  textItem('verbal', {
+    id: 'ver-15',
+    difficulty: 3,
+    prompt: q('Loupe', 'agrandir', 'filtre'),
+    options: ['Épurer', 'Grossir', 'Éclairer', 'Réfléchir', 'Déformer'],
+    correctIndex: 0,
+    explanation: "La relation est « objet → fonction ». Un filtre sert à épurer, c'est-à-dire à retenir ce qu'on veut écarter.",
+    reasoning: [
+      'La loupe a pour fonction d\'agrandir.',
+      'Le filtre a pour fonction de séparer et de retenir.',
+    ],
+    expectedSeconds: 45,
+  }),
+
+  textItem('verbal', {
+    id: 'ver-16',
+    difficulty: 4,
+    prompt: q('Avare', 'argent', 'glouton'),
+    options: ['Appétit', 'Table', 'Nourriture', 'Ventre', 'Gourmandise'],
+    correctIndex: 2,
+    explanation: "La relation est « travers → objet du travers ». Le glouton est excessif à l'égard de la nourriture.",
+    reasoning: [
+      "L'avare l'est à l'égard de l'argent.",
+      "« Gourmandise » nomme le travers, pas son objet.",
+    ],
+    expectedSeconds: 55,
+  }),
+  textItem('verbal', {
+    id: 'ver-17',
+    difficulty: 4,
+    prompt: q('Prudence', 'imprudence', 'courage'),
+    options: ['Bravoure', 'Lâcheté', 'Peur', 'Audace', 'Force'],
+    correctIndex: 1,
+    explanation: 'La relation oppose une qualité au défaut correspondant. Au courage s\'oppose la lâcheté.',
+    reasoning: [
+      "L'imprudence est le défaut qui s'oppose à la prudence.",
+      "« Peur » est une émotion, que le courage surmonte sans être son contraire.",
+      "« Bravoure » et « audace » sont des synonymes du courage, pas des contraires.",
+    ],
+    expectedSeconds: 55,
+  }),
+  textItem('verbal', {
+    id: 'ver-18',
+    difficulty: 4,
+    prompt: q('Éphémère', 'durable', 'superflu'),
+    options: ['Rare', 'Abondant', 'Luxueux', 'Inutile', 'Indispensable'],
+    correctIndex: 4,
+    explanation: 'La relation oppose deux termes. Au superflu s\'oppose l\'indispensable.',
+    reasoning: [
+      "Éphémère et durable sont contraires.",
+      "« Inutile » est proche de superflu, donc synonyme et non contraire.",
+    ],
+    expectedSeconds: 58,
+  }),
+  textItem('verbal', {
+    id: 'ver-19',
+    difficulty: 4,
+    prompt: q('Préface', 'livre', 'ouverture'),
+    options: ['Opéra', 'Chanson', 'Tableau', 'Poème', 'Discours'],
+    correctIndex: 0,
+    explanation:
+      "La relation est « morceau introductif → œuvre qu'il ouvre ». L'ouverture précède l'opéra.",
+    reasoning: [
+      'La préface ouvre un livre.',
+      "L'ouverture est la pièce orchestrale qui précède un opéra.",
+    ],
+    expectedSeconds: 58,
+  }),
+  textItem('verbal', {
+    id: 'ver-20',
+    difficulty: 4,
+    prompt: q('Aridité', 'désert', 'humidité'),
+    options: ['Océan', 'Pluie', 'Marais', 'Nuage', 'Rivière'],
+    correctIndex: 2,
+    explanation:
+      "La relation est « caractère dominant → milieu qu'il définit ». L'humidité définit le marais.",
+    reasoning: [
+      "L'aridité est le trait qui définit le désert comme milieu.",
+      "« Océan » et « rivière » sont faits d'eau, ils ne sont pas définis par l'humidité de l'air et du sol.",
+    ],
+    expectedSeconds: 60,
+  }),
+
+  textItem('verbal', {
+    id: 'ver-21',
+    difficulty: 5,
+    prompt: q('Sismographe', 'séisme', 'électrocardiogramme'),
+    options: ['Poumon', 'Sang', 'Cerveau', 'Cœur', 'Pouls'],
+    correctIndex: 3,
+    explanation:
+      "La relation est « appareil → phénomène dont il enregistre l'activité ». L'électrocardiogramme enregistre l'activité du cœur.",
+    reasoning: [
+      "Le sismographe enregistre l'activité sismique de la Terre.",
+      "« Pouls » est une manifestation perceptible, pas l'organe dont l'activité est enregistrée.",
+    ],
+    expectedSeconds: 70,
+  }),
+  textItem('verbal', {
+    id: 'ver-22',
+    difficulty: 5,
+    prompt: q('Scepticisme', 'croyance', 'doute'),
+    options: ['Certitude', 'Foi', 'Question', 'Hésitation', 'Preuve'],
+    correctIndex: 0,
+    explanation:
+      "La relation oppose une disposition d'esprit à ce qu'elle met en cause. Le doute s'oppose à la certitude.",
+    reasoning: [
+      'Le scepticisme met en cause la croyance.',
+      "« Hésitation » est un synonyme du doute ; « preuve » est ce qui le lève.",
+    ],
+    expectedSeconds: 72,
+  }),
+  textItem('verbal', {
+    id: 'ver-23',
+    difficulty: 5,
+    prompt: q('Embryon', 'organisme', 'ébauche'),
+    options: ['Brouillon', 'Esquisse', 'Artiste', 'Œuvre', 'Projet'],
+    correctIndex: 3,
+    explanation:
+      "La relation est « forme initiale → forme achevée ». L'ébauche est l'état initial de l'œuvre.",
+    reasoning: [
+      "L'embryon est la forme initiale de l'organisme achevé.",
+      "« Brouillon » et « esquisse » sont des synonymes d'ébauche, donc du premier terme et non du second.",
+    ],
+    expectedSeconds: 75,
+  }),
+  textItem('verbal', {
+    id: 'ver-24',
+    difficulty: 5,
+    prompt: q('Digue', 'inondation', 'vaccin'),
+    options: ['Maladie', 'Médecin', 'Guérison', 'Seringue', 'Immunité'],
+    correctIndex: 0,
+    explanation:
+      "La relation est « dispositif → fléau qu'il prévient ». Le vaccin prévient la maladie.",
+    reasoning: [
+      "La digue est construite pour empêcher l'inondation de survenir.",
+      "« Guérison » et « immunité » sont des résultats recherchés, pas ce qui est empêché.",
+    ],
+    expectedSeconds: 72,
+  }),
+];

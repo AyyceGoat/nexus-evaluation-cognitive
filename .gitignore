@@ -1,0 +1,27 @@
+# Dépendances
+node_modules/
+
+# Sorties de build
+dist/
+dist.zip
+*.zip
+
+# Variables d'environnement — jamais commitées
+.env
+.env.*
+!.env.example
+
+# Outils locaux
+.vite/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+# Système
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Supabase (Phase 4) — état local et secrets
+supabase/.branches/
+supabase/.temp/

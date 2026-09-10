@@ -1,0 +1,278 @@
+import { textItem } from './_builders';
+import type { IQItem } from '../../lib/iq/types';
+
+/**
+ * Limite assumée de cette aptitude, documentée dans docs/SCORING.md :
+ * l'énoncé reste affiché pendant que le candidat répond. Ces items mesurent donc la
+ * MANIPULATION en mémoire de travail (transformer, réordonner, enchaîner des
+ * opérations sur une information tenue en tête), et non l'EMPAN mnésique, qui
+ * exigerait une présentation chronométrée puis masquée. Cette mécanique d'affichage
+ * n'existe pas encore dans l'interface ; tant qu'elle n'existe pas, prétendre mesurer
+ * l'empan serait faux.
+ */
+export const memoryItems: IQItem[] = [
+  textItem('memory', {
+    id: 'mem-01',
+    difficulty: 1,
+    prompt: 'Partez de 12. Ajoutez 5, puis retirez 3. Quel nombre obtenez-vous ?',
+    options: ['12', '13', '14', '15', '17'],
+    correctIndex: 2,
+    explanation: '12 + 5 = 17, puis 17 − 3 = 14.',
+    reasoning: ['Première opération : 12 + 5 = 17.', 'Seconde opération : 17 − 3 = 14.'],
+    expectedSeconds: 25,
+  }),
+  textItem('memory', {
+    id: 'mem-02',
+    difficulty: 1,
+    prompt: "Quelle lettre se trouve trois rangs après le F dans l'alphabet ?",
+    options: ['H', 'I', 'J', 'K', 'G'],
+    correctIndex: 1,
+    explanation: 'Après F viennent G, H, puis I. La troisième est I.',
+    reasoning: ['G est au premier rang après F.', 'H au deuxième, I au troisième.'],
+    expectedSeconds: 28,
+  }),
+  textItem('memory', {
+    id: 'mem-03',
+    difficulty: 1,
+    prompt: 'Série : 2 - 7 - 5.\n\nLue à l\'envers, quel en est le premier terme ?',
+    options: ['2', '5', '7', '3', '9'],
+    correctIndex: 1,
+    explanation: "Lue à l'envers, la série devient 5 - 7 - 2. Son premier terme est 5.",
+    reasoning: ["Le dernier terme de la série d'origine devient le premier."],
+    expectedSeconds: 25,
+  }),
+  textItem('memory', {
+    id: 'mem-04',
+    difficulty: 1,
+    prompt: 'Série : 4 - 1 - 4 - 9 - 4 - 2.\n\nCombien de fois le chiffre 4 apparaît-il ?',
+    options: ['2', '3', '4', '5', '6'],
+    correctIndex: 1,
+    explanation: 'Le 4 occupe les rangs 1, 3 et 5 : il apparaît trois fois.',
+    reasoning: ['Repérer les positions du 4 : 1ʳᵉ, 3ᵉ et 5ᵉ.'],
+    expectedSeconds: 25,
+  }),
+  textItem('memory', {
+    id: 'mem-05',
+    difficulty: 1,
+    prompt: 'Classez mentalement 8, 3 et 11 par ordre croissant. Quelle est la deuxième valeur ?',
+    options: ['3', '8', '11', '9', '5'],
+    correctIndex: 1,
+    explanation: "L'ordre croissant est 3, 8, 11. La deuxième valeur est 8.",
+    reasoning: ['Le plus petit est 3, le plus grand 11.', '8 se place entre les deux.'],
+    expectedSeconds: 28,
+  }),
+
+  textItem('memory', {
+    id: 'mem-06',
+    difficulty: 2,
+    prompt: 'Partez de 20. Retirez 6, doublez le résultat, puis retirez 8. Quel nombre obtenez-vous ?',
+    options: ['16', '18', '20', '22', '28'],
+    correctIndex: 2,
+    explanation: '20 − 6 = 14, puis 14 × 2 = 28, puis 28 − 8 = 20.',
+    reasoning: ['20 − 6 = 14.', '14 × 2 = 28.', '28 − 8 = 20.'],
+    expectedSeconds: 40,
+  }),
+  textItem('memory', {
+    id: 'mem-07',
+    difficulty: 2,
+    prompt: "Série : B - K - R - M - T.\n\nLue à l'envers, quelle lettre occupe la troisième position ?",
+    options: ['K', 'M', 'R', 'T', 'B'],
+    correctIndex: 2,
+    explanation: "À l'envers, la série devient T - M - R - K - B. La troisième lettre est R.",
+    reasoning: ['Inverser : T, M, R, K, B.', 'Compter jusqu\'au troisième rang : R.'],
+    expectedSeconds: 42,
+  }),
+  textItem('memory', {
+    id: 'mem-08',
+    difficulty: 2,
+    prompt: 'Série : 7 - 3 - 9 - 1 - 5 - 8.\n\nQuel nombre précède immédiatement le plus grand de la série ?',
+    options: ['7', '3', '1', '5', '8'],
+    correctIndex: 1,
+    explanation: 'Le plus grand est 9, en troisième position. Le nombre qui le précède est 3.',
+    reasoning: ['Identifier le maximum : 9.', 'Repérer sa position, puis lire le terme juste avant : 3.'],
+    expectedSeconds: 40,
+  }),
+  textItem('memory', {
+    id: 'mem-09',
+    difficulty: 2,
+    prompt: 'Dans le mot LANTERNE, quelle est la cinquième lettre ?',
+    options: ['T', 'E', 'R', 'N', 'A'],
+    correctIndex: 1,
+    explanation: 'L-A-N-T-E-R-N-E : la cinquième lettre est E.',
+    reasoning: ['Compter : L(1), A(2), N(3), T(4), E(5).'],
+    expectedSeconds: 38,
+  }),
+  textItem('memory', {
+    id: 'mem-10',
+    difficulty: 2,
+    prompt:
+      'Liste A : rouge, vert, bleu.\nListe B : vert, jaune, rouge, blanc.\n\nQuelle couleur de la liste A est absente de la liste B ?',
+    options: ['Rouge', 'Vert', 'Bleu', 'Jaune', 'Blanc'],
+    correctIndex: 2,
+    explanation: 'Rouge et vert figurent dans les deux listes. Bleu ne figure que dans A.',
+    reasoning: ['Comparer chaque élément de A à la liste B.', 'Seul bleu ne s\'y retrouve pas.'],
+    expectedSeconds: 40,
+  }),
+
+  textItem('memory', {
+    id: 'mem-11',
+    difficulty: 3,
+    prompt: 'Partez de 7. Doublez, ajoutez 6, divisez par 4, puis retirez 2. Quel nombre obtenez-vous ?',
+    options: ['2', '3', '4', '5', '6'],
+    correctIndex: 1,
+    explanation: '7 × 2 = 14, puis 14 + 6 = 20, puis 20 ÷ 4 = 5, puis 5 − 2 = 3.',
+    reasoning: ['7 × 2 = 14.', '14 + 6 = 20.', '20 ÷ 4 = 5.', '5 − 2 = 3.'],
+    expectedSeconds: 50,
+  }),
+  textItem('memory', {
+    id: 'mem-12',
+    difficulty: 3,
+    prompt: 'Série : 5 - 9 - 2 - 8 - 4.\n\nAdditionnez le deuxième et le quatrième terme.',
+    options: ['7', '11', '13', '17', '12'],
+    correctIndex: 3,
+    explanation: 'Le deuxième terme est 9, le quatrième est 8. Leur somme vaut 17.',
+    reasoning: ['Repérer le 2ᵉ terme : 9.', 'Repérer le 4ᵉ terme : 8.', '9 + 8 = 17.'],
+    expectedSeconds: 48,
+  }),
+  textItem('memory', {
+    id: 'mem-13',
+    difficulty: 3,
+    prompt: 'Dans le mot ORDINATEUR, quelle lettre précède immédiatement le second R ?',
+    options: ['E', 'U', 'T', 'A', 'I'],
+    correctIndex: 1,
+    explanation: 'O-R-D-I-N-A-T-E-U-R : le second R est la dernière lettre, précédée par U.',
+    reasoning: [
+      'Le premier R est en deuxième position.',
+      'Le second R termine le mot, en dixième position.',
+      'La lettre en neuvième position est U.',
+    ],
+    expectedSeconds: 52,
+  }),
+  textItem('memory', {
+    id: 'mem-14',
+    difficulty: 3,
+    prompt: 'Classez 14, 9, 21, 6 et 17 par ordre décroissant. Quelle est la quatrième valeur ?',
+    options: ['6', '9', '14', '17', '21'],
+    correctIndex: 1,
+    explanation: "L'ordre décroissant est 21, 17, 14, 9, 6. La quatrième valeur est 9.",
+    reasoning: ['Trier du plus grand au plus petit.', 'Compter jusqu\'au quatrième rang : 9.'],
+    expectedSeconds: 50,
+  }),
+  textItem('memory', {
+    id: 'mem-15',
+    difficulty: 3,
+    prompt: "Quelle lettre se trouve exactement à mi-chemin entre C et K dans l'alphabet ?",
+    options: ['F', 'G', 'H', 'I', 'J'],
+    correctIndex: 1,
+    explanation: 'C occupe le rang 3 et K le rang 11. Le rang médian est 7, soit la lettre G.',
+    reasoning: ['C = 3, K = 11.', '(3 + 11) ÷ 2 = 7.', 'La septième lettre est G.'],
+    expectedSeconds: 55,
+  }),
+
+  textItem('memory', {
+    id: 'mem-16',
+    difficulty: 4,
+    prompt: 'Partez de 3. Triplez, ajoutez 5, retirez 2, puis divisez par 6. Quel nombre obtenez-vous ?',
+    options: ['1', '2', '3', '4', '6'],
+    correctIndex: 1,
+    explanation: '3 × 3 = 9, puis 9 + 5 = 14, puis 14 − 2 = 12, puis 12 ÷ 6 = 2.',
+    reasoning: ['3 × 3 = 9.', '9 + 5 = 14.', '14 − 2 = 12.', '12 ÷ 6 = 2.'],
+    expectedSeconds: 62,
+  }),
+  textItem('memory', {
+    id: 'mem-17',
+    difficulty: 4,
+    prompt:
+      'Série : 6 - 2 - 9 - 4 - 7 - 1.\n\nQuelle est la différence entre la somme des trois premiers termes et celle des trois derniers ?',
+    options: ['3', '4', '5', '6', '7'],
+    correctIndex: 2,
+    explanation: '6 + 2 + 9 = 17 ; 4 + 7 + 1 = 12. La différence vaut 5.',
+    reasoning: ['Somme des trois premiers : 17.', 'Somme des trois derniers : 12.', '17 − 12 = 5.'],
+    expectedSeconds: 65,
+  }),
+  textItem('memory', {
+    id: 'mem-18',
+    difficulty: 4,
+    prompt:
+      "Série : 3 - 6 - 9 - 12.\n\nLisez-la à l'envers, puis retirez 2 à chaque terme. Quel est le deuxième terme obtenu ?",
+    options: ['4', '7', '10', '1', '9'],
+    correctIndex: 1,
+    explanation: "À l'envers : 12 - 9 - 6 - 3. En retirant 2 : 10 - 7 - 4 - 1. Le deuxième terme est 7.",
+    reasoning: ['Inverser la série : 12, 9, 6, 3.', 'Retirer 2 à chacun : 10, 7, 4, 1.', 'Le deuxième est 7.'],
+    expectedSeconds: 68,
+  }),
+  textItem('memory', {
+    id: 'mem-19',
+    difficulty: 4,
+    prompt: 'Dans le mot ANNIVERSAIRE, combien de fois la lettre A apparaît-elle ?',
+    options: ['1', '2', '3', '4', '5'],
+    correctIndex: 1,
+    explanation: 'A-N-N-I-V-E-R-S-A-I-R-E : le A apparaît en première et en neuvième position, soit deux fois.',
+    reasoning: ['Parcourir le mot lettre à lettre.', 'Deux A seulement : rangs 1 et 9.'],
+    expectedSeconds: 60,
+  }),
+  textItem('memory', {
+    id: 'mem-20',
+    difficulty: 4,
+    prompt:
+      "Additionnez le rang de la lettre B et celui de la lettre E dans l'alphabet. Quelle lettre occupe le rang obtenu ?",
+    options: ['F', 'G', 'H', 'I', 'J'],
+    correctIndex: 1,
+    explanation: 'B occupe le rang 2, E le rang 5. Leur somme vaut 7, soit la lettre G.',
+    reasoning: ['B = 2, E = 5.', '2 + 5 = 7.', 'La septième lettre est G.'],
+    expectedSeconds: 65,
+  }),
+
+  textItem('memory', {
+    id: 'mem-21',
+    difficulty: 5,
+    prompt:
+      'Partez de 4. Élevez au carré, retirez 7, divisez par 3, puis ajoutez 5. Quel nombre obtenez-vous ?',
+    options: ['6', '7', '8', '9', '10'],
+    correctIndex: 2,
+    explanation: '4² = 16, puis 16 − 7 = 9, puis 9 ÷ 3 = 3, puis 3 + 5 = 8.',
+    reasoning: ['4² = 16.', '16 − 7 = 9.', '9 ÷ 3 = 3.', '3 + 5 = 8.'],
+    expectedSeconds: 78,
+  }),
+  textItem('memory', {
+    id: 'mem-22',
+    difficulty: 5,
+    prompt:
+      'Série : 8 - 3 - 5 - 9 - 2 - 7.\n\nAdditionnez les termes de rang impair, c\'est-à-dire le premier, le troisième et le cinquième.',
+    options: ['12', '15', '17', '19', '21'],
+    correctIndex: 1,
+    explanation: 'Les rangs impairs portent 8, 5 et 2. Leur somme vaut 15.',
+    reasoning: ['1ᵉʳ terme : 8.', '3ᵉ terme : 5.', '5ᵉ terme : 2.', '8 + 5 + 2 = 15.'],
+    expectedSeconds: 75,
+  }),
+  textItem('memory', {
+    id: 'mem-23',
+    difficulty: 5,
+    prompt:
+      "Série : 2 - 5 - 8 - 11 - 14.\n\nLisez-la à l'envers, puis gardez un terme sur deux en commençant par le premier. Quelle est la somme des termes gardés ?",
+    options: ['20', '22', '24', '26', '28'],
+    correctIndex: 2,
+    explanation: "À l'envers : 14 - 11 - 8 - 5 - 2. Un terme sur deux donne 14, 8 et 2, dont la somme vaut 24.",
+    reasoning: [
+      'Inverser : 14, 11, 8, 5, 2.',
+      'Garder les rangs 1, 3 et 5 : 14, 8, 2.',
+      '14 + 8 + 2 = 24.',
+    ],
+    expectedSeconds: 85,
+  }),
+  textItem('memory', {
+    id: 'mem-24',
+    difficulty: 5,
+    prompt:
+      'Dans le mot CIRCONSTANCE, comptez les lettres C. Quelle lettre occupe la position égale à ce nombre ?',
+    options: ['I', 'R', 'C', 'O', 'N'],
+    correctIndex: 1,
+    explanation:
+      'C-I-R-C-O-N-S-T-A-N-C-E contient trois C (rangs 1, 4 et 11). La troisième lettre du mot est R.',
+    reasoning: [
+      'Compter les C : rangs 1, 4 et 11, soit trois.',
+      'Lire la lettre de rang 3 : R.',
+    ],
+    expectedSeconds: 88,
+  }),
+];
