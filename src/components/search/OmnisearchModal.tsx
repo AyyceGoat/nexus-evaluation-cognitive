@@ -40,25 +40,13 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
       return [
         {
           id: 'sug_iq',
-          title: 'Testez votre QI & Aptitudes Cognitives',
-          subtitle: 'Matrices de Raven, suites numériques, logique déductive et rapport complet.',
+          title: 'Évaluer mes aptitudes cognitives',
+          subtitle: 'Cinq aptitudes, 35 questions, un indice assorti de sa marge d’erreur.',
           category: 'Évaluation',
           type: 'iq',
           icon: '🧠',
           action: () => {
             navigate({ type: 'iq' });
-            onClose();
-          },
-        },
-        {
-          id: 'sug_ai',
-          title: 'Nexus AI — Tuteur Intelligent',
-          subtitle: 'Posez des questions, vulgarisez ou approfondissez n\'importe quel concept.',
-          category: 'Intelligence',
-          type: 'extended',
-          icon: '✨',
-          action: () => {
-            navigate({ type: 'ai' });
             onClose();
           },
         },

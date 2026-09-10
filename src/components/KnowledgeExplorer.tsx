@@ -1,5 +1,4 @@
 import { useState, useMemo, memo } from 'react';
-import type { Page } from '../App';
 import { extendedDomains, extendedKnowledgeItems, ExtendedKnowledgeItem } from '../data/knowledgeExtended';
 import {
   BookOpen,
@@ -11,15 +10,25 @@ import {
   Lightbulb,
   Compass,
   Search,
-  Bot,
 } from 'lucide-react';
 
 interface Props {
-  navigate: (page: Page) => void;
+  /**
+   * Domaine présélectionné, issu de l'URL `/savoir/:domaine`.
+   *
+   * Auparavant la route transmettait ce paramètre et le composant ne le lisait
+   * jamais : le filtre restait sur « tous » quel que soit le lien suivi. Le
+   * paramètre est désormais honoré, et ignoré s'il ne correspond à aucun domaine.
+   */
+  initialDomainId?: string;
 }
 
-function KnowledgeExplorer({ navigate }: Props) {
-  const [selectedDomain, setSelectedDomain] = useState<string>('all');
+function KnowledgeExplorer({ initialDomainId }: Props) {
+  const [selectedDomain, setSelectedDomain] = useState<string>(() =>
+    initialDomainId && extendedDomains.some((d) => d.id === initialDomainId)
+      ? initialDomainId
+      : 'all'
+  );
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedExtendedItem, setSelectedExtendedItem] = useState<ExtendedKnowledgeItem | null>(null);
   const [activeTab, setActiveTab] = useState<'article' | 'concepts' | 'flashcards'>('article');
@@ -197,20 +206,6 @@ function KnowledgeExplorer({ navigate }: Props) {
               </div>
             )}
 
-            {/* Bouton CTA pour interagir avec Nexus AI sur ce sujet */}
-            <div className="mt-8 pt-6 border-t border-ardoise/40 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2.5 text-xs text-brume">
-                <Sparkles className="w-4 h-4 text-mesure" />
-                <span>Une question sur ce sujet ? Posez-la directement au tuteur.</span>
-              </div>
-              <button
-                onClick={() => navigate({ type: 'ai' })}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-1 bg-mesure text-noir font-bold text-xs flex items-center justify-center gap-2 transition-colors"
-              >
-                <Bot className="w-4 h-4" />
-                <span>Approfondir avec Nexus AI</span>
-              </button>
-            </div>
           </div>
         </div>
       ) : (

@@ -3,7 +3,6 @@ import { AptitudeProfile } from './AptitudeProfile';
 import { IntervalBar } from './IntervalBar';
 import { IQCertificate } from './IQCertificate';
 import { MatrixRenderer } from './MatrixRenderer';
-import { isReportUnlocked } from '../../lib/iq/storage';
 import { APTITUDE_LABEL } from '../../lib/iq/types';
 import type { IQItem, IQReport } from '../../lib/iq/types';
 import { AlertTriangle, ChevronDown, ChevronUp, Lock, RotateCcw } from 'lucide-react';
@@ -12,16 +11,24 @@ interface IQResultsViewProps {
   report: IQReport;
   items: readonly IQItem[];
   onRestart: () => void;
+  /**
+   * Droit d'accès au rapport complet, résolu par l'appelant auprès du backend.
+   *
+   * Ce n'est plus une lecture de `localStorage` : la table `entitlements` n'a aucune
+   * politique d'écriture, donc aucun client ne peut s'accorder ce droit. Un booléen
+   * qui arriverait ici depuis le navigateur n'autoriserait rien côté serveur.
+   */
+  debloque?: boolean;
 }
 
 type Tab = 'profil' | 'corrections' | 'attestation';
 
-export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) {
+export function IQResultsView({ report, items, onRestart, debloque = false }: IQResultsViewProps) {
   const [tab, setTab] = useState<Tab>('profil');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const itemsById = new Map(items.map((item) => [item.id, item]));
-  const unlocked = isReportUnlocked(report.sessionId);
+  const unlocked = debloque;
   const interpretable = report.validity.verdict !== 'not_interpretable';
 
   // ── Profil inexploitable : on n'affiche aucun score ────────────────────────

@@ -3,6 +3,8 @@ import { itemBank } from '../../data/iq';
 import { buildReport } from '../../lib/iq/score';
 import { selectSession } from '../../lib/iq/selection';
 import { getRecentItemIds, recordSession, saveReport } from '../../lib/iq/storage';
+import { backend } from '../../lib/backend';
+import { useAuth } from '../../app/auth';
 import { APTITUDE_LABEL, APTITUDES } from '../../lib/iq/types';
 import type { IQItem, IQReport, ItemResponse } from '../../lib/iq/types';
 import { MatrixRenderer } from './MatrixRenderer';
@@ -19,6 +21,11 @@ const LENGTHS = [
 ] as const;
 
 export function IQTestRunner() {
+  // L'évaluation reste accessible sans compte : c'est une décision produit assumée
+  // (« gratuit, sans compte »). Connecté, la passation est en plus enregistrée côté
+  // backend — c'est ce qui alimentera la recalibration de la banque d'items.
+  const { utilisateur } = useAuth();
+  const passationDistante = useRef<string | null>(null);
   const [stage, setStage] = useState<Stage>('config');
   const [length, setLength] = useState<number>(35);
   const [candidateName, setCandidateName] = useState('');
@@ -62,6 +69,18 @@ export function IQTestRunner() {
       count: length,
       excludeIds: getRecentItemIds(),
     });
+
+    // Ouverte dès le départ : une passation abandonnée laisse une ligne, ce qui est
+    // une donnée utile plutôt qu'un trou.
+    passationDistante.current = null;
+    if (utilisateur) {
+      void backend
+        .ouvrirPassation(selected.map((item) => item.id))
+        .then((resultat) => {
+          if (resultat.ok) passationDistante.current = resultat.valeur;
+        });
+    }
+
     setItems(selected);
     setIndex(0);
     setAnswers({});
@@ -69,7 +88,7 @@ export function IQTestRunner() {
     enteredAt.current = Date.now();
     sessionStartedAt.current = new Date().toISOString();
     setStage('running');
-  }, [length]);
+  }, [length, utilisateur]);
 
   const finish = useCallback(() => {
     commitTime(current?.id);
@@ -96,7 +115,21 @@ export function IQTestRunner() {
     saveReport(built);
     setReport(built);
     setStage('done');
-  }, [answers, candidateName, commitTime, current?.id, items]);
+
+    // Persistance distante quand un compte existe. Le rapport affiché reste celui
+    // calculé ici ; en mode Supabase, `cloturerPassation` renvoie celui recalculé
+    // par le serveur, qui fait foi.
+    const distante = passationDistante.current;
+    if (utilisateur && distante) {
+      void (async () => {
+        for (const reponse of responses) {
+          await backend.enregistrerReponse(distante, reponse);
+        }
+        const cloture = await backend.cloturerPassation(distante, built);
+        if (cloture.ok) setReport(cloture.valeur);
+      })();
+    }
+  }, [answers, candidateName, commitTime, current?.id, items, utilisateur]);
 
   const goTo = useCallback(
     (next: number) => {

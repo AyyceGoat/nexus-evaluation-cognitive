@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { Page } from '../App';
-import { Brain, Sparkles, BookOpen, Globe2, Zap, ArrowRight } from 'lucide-react';
+import { Brain, BookOpen, Globe2, Zap, ArrowRight } from 'lucide-react';
 
 interface Props {
   navigate: (page: Page) => void;
@@ -41,13 +41,6 @@ function HomePage({ navigate }: Props) {
               <span>Évaluer mes aptitudes cognitives</span>
             </button>
 
-            <button
-              onClick={() => navigate({ type: 'ai' })}
-              className="w-full sm:w-auto px-7 py-4 rounded-2 bg-graphite border border-ardoise hover:bg-ardoise/50 text-craie font-semibold text-sm sm:text-base border border-mesure/40 hover:scale-[1.02] active:scale-[0.98] transition-colors flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-5 h-5 text-mesure" />
-              <span>Nexus AI Tutor</span>
-            </button>
 
             <button
               onClick={() => navigate({ type: 'knowledge' })}
@@ -187,26 +180,6 @@ function HomePage({ navigate }: Props) {
             </span>
           </div>
 
-          {/* Card 2 : Nexus AI */}
-          <div
-            onClick={() => navigate({ type: 'ai' })}
-            className="p-6 rounded-2 bg-graphite border border-ardoise border border-mesure/30 hover:border-mesure/60 cursor-pointer group flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-1 bg-mesure/20 text-mesure flex items-center justify-center mb-4">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <h3 className="font-titre font-bold text-base text-craie group-hover:text-mesure transition-colors mb-2">
-                Nexus AI Tutor
-              </h3>
-              <p className="text-xs text-brume leading-relaxed mb-4">
-                Vulgarisation (ELI5), analyses approfondies et fiches de révision générées à la volée.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-mesure flex items-center gap-1">
-              Discuter avec l'IA →
-            </span>
-          </div>
 
           {/* Card 3 : Bibliothèque Augmentée */}
           <div
