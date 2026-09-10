@@ -44,14 +44,13 @@ function useTitre(titre: string, description: string) {
 }
 
 export function PageAccueil() {
-  const navigate = useNavigatePage();
   useTitre(
     'NEXUS — Évaluation des aptitudes cognitives',
     'Mesurez cinq aptitudes cognitives et obtenez un indice assorti de sa marge d’erreur. 35 questions, environ 25 minutes.'
   );
   return (
     <Suspense fallback={<Attente />}>
-      <HomePage navigate={navigate} />
+      <HomePage />
     </Suspense>
   );
 }

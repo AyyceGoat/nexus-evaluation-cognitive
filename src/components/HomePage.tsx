@@ -1,229 +1,183 @@
-import { memo } from 'react';
-import type { Page } from '../App';
-import { Brain, BookOpen, Globe2, Zap, ArrowRight } from 'lucide-react';
+import { memo, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { RobotHero } from './robot/RobotHero';
+import { Button } from './ui/Button';
+import { CHEMINS } from '../app/navigation';
+import { itemBank } from '../data/iq';
+import { DEFAULT_SESSION_LENGTH } from '../lib/iq/selection';
 
-interface Props {
-  navigate: (page: Page) => void;
-}
+/**
+ * Landing.
+ *
+ * Structure imposée par DESIGN.md §8. Trois partis pris qui expliquent ce qui n'y est
+ * pas :
+ *
+ * - **Aucune carte.** Les trois promesses sont des colonnes séparées par des filets,
+ *   pas trois panneaux au même rayon avec la même ombre.
+ * - **L'audace est concentrée en un seul endroit**, le robot. Le reste de la page est
+ *   du texte sur du noir, avec un unique accent réservé aux chiffres et à leur marge.
+ * - **Rien n'apparaît au défilement.** L'ancienne version déclenchait un fondu-montée
+ *   sur chaque section.
+ */
+function HomePage() {
+  const refCta = useRef<HTMLAnchorElement>(null);
 
-function HomePage({ navigate }: Props) {
   return (
-    <div className="relative text-craie">
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center overflow-hidden py-12">
-
-
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-graphite border border-ardoise text-xs sm:text-sm text-brume mb-6">
-              <span className="w-2 h-2 rounded-full bg-mesure" />
-              Plateforme d'Intelligence, Savoir & Évaluation Cognitive
-            </div>
-          </div>
-
-          <h1 className="font-titre text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] mb-6">
-            L'Intelligence & le <span className="text-craie">Savoir</span>
-            <br />
-            sans <span className="text-mesure">Frontières</span>
+    <>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_auto] lg:gap-16 lg:py-24">
+        <div className="flex flex-col gap-8">
+          <h1 className="max-w-[18ch] text-t1 text-craie sm:text-display">
+            Mesurez vos aptitudes cognitives. Avec la marge d’erreur.
           </h1>
 
-          <p className="text-sm sm:text-lg md:text-xl text-brume max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-light">
-            Une plateforme tout-en-un pour explorer les civilisations, stimuler votre esprit avec des tests de QI psychométriques et interagir avec notre tuteur d'apprentissage intelligent.
+          <p className="mesure-texte text-corps text-brume">
+            {DEFAULT_SESSION_LENGTH} questions, environ 25 minutes. Vous obtenez un indice
+            estimé, son intervalle de confiance, et un profil sur cinq aptitudes. Gratuit,
+            sans compte.
           </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-            <button
-              onClick={() => navigate({ type: 'iq' })}
-              className="w-full sm:w-auto px-8 py-4 rounded-2 bg-mesure text-noir font-bold text-sm sm:text-base hover:scale-[1.02] active:scale-[0.98] transition-colors flex items-center justify-center gap-2.5"
+          <div className="flex flex-wrap items-center gap-4">
+            <Link ref={refCta} to={CHEMINS.evaluation} className="rounded-1">
+              <Button variant="principal">Commencer l’évaluation</Button>
+            </Link>
+            <Link
+              to={CHEMINS.inscription}
+              className="rounded-1 text-petit text-brume transition-colors hover:text-craie"
             >
-              <Brain className="w-5 h-5" />
-              <span>Évaluer mes aptitudes cognitives</span>
-            </button>
-
-
-            <button
-              onClick={() => navigate({ type: 'knowledge' })}
-              className="w-full sm:w-auto px-6 py-4 rounded-2 bg-graphite border border-ardoise text-brume hover:text-craie font-medium text-sm hover:bg-ardoise/50 transition-colors"
-            >
-              📚 Explorer le Savoir
-            </button>
+              Créer un compte pour suivre ma progression
+            </Link>
           </div>
+        </div>
 
-          {/* Stats Bar */}
-          <div className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto">
-            {[
-              { num: '5', label: 'Aptitudes évaluées' },
-              { num: '120', label: 'Questions en banque' },
-              { num: '195', label: 'Pays & Civilisations' },
-              { num: '464', label: 'Questions de quiz' },
-            ].map((stat) => (
-              <div key={stat.label} className="p-4 rounded-2 bg-graphite border border-ardoise text-center">
-                <p className="text-xl sm:text-2xl font-bold text-craie">{stat.num}</p>
-                <p className="text-[11px] sm:text-xs text-brume mt-1">{stat.label}</p>
-              </div>
-            ))}
-          </div>
+        {/* Le conteneur porte une hauteur fixe : le poster et le canvas se
+            superposent en absolu, donc rien ne décale la mise en page au chargement
+            de la 3D. */}
+        <div className="relative mx-auto h-[280px] w-[240px] sm:h-[380px] sm:w-[320px] lg:h-[440px] lg:w-[380px]">
+          <RobotHero refCta={refCta} />
         </div>
       </section>
 
-      {/* SECTION 1 : MODULE QI & APTITUDES COGNITIVES */}
-      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="relative rounded-2 bg-graphite border border-ardoise border border-mesure/30 p-8 sm:p-12 overflow-hidden">
+      {/* ── Ce que vous obtenez ──────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+        <h2 className="text-t2 text-craie">Ce que vous obtenez</h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-mesure/20 text-mesure text-xs font-bold uppercase tracking-wider mb-4 border border-mesure/30">
-                <Zap className="w-3.5 h-3.5" /> Évaluation Psychométrique
-              </div>
-              <h2 className="font-titre text-3xl sm:text-4xl font-extrabold text-craie mb-4">
-                Mesurez votre Potentiel Intellectuel avec <span className="text-mesure">Précision</span>
-              </h2>
-              <p className="text-brume text-sm sm:text-base leading-relaxed mb-6 font-light">
-                Un banc de test complet inspiré des matrices progressives de Raven et des protocoles d'agilité cognitive modernes. Rendu 100% vectoriel SVG adapté aux téléphones portables.
-              </p>
+        <div className="mt-10 grid gap-10 sm:grid-cols-3 sm:gap-0">
+          <Promesse titre="Un indice estimé" premier>
+            <p className="nombres flex flex-wrap items-baseline gap-3">
+              <span className="font-titre text-t1 text-craie">112</span>
+              <span className="text-corps text-mesure">104 – 120</span>
+            </p>
+            <p className="mt-3 text-petit text-brume">
+              L’intervalle fait partie du résultat. Il n’est ni en petit, ni relégué en
+              note.
+            </p>
+          </Promesse>
 
-              <div className="space-y-3 mb-8">
-                {[
-                  'Matrices logiques et séries de rotation en SVG',
-                  'Séries numériques, analogies verbales, mémoire de travail',
-                  'Profil par aptitude, avec sa marge d’erreur affichée',
-                  'Attestation de passation imprimable',
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 text-xs sm:text-sm text-craie">
-                    <span className="w-5 h-5 rounded-full bg-mesure/20 text-mesure flex items-center justify-center font-bold text-xs shrink-0">
-                      ✓
-                    </span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
+          <Promesse titre="Un profil par aptitude">
+            <p className="text-petit text-brume">
+              Cinq aptitudes, en bandes larges dont l’épaisseur est la marge d’erreur.
+              Aucun sous-score chiffré : sur sept questions par aptitude, un classement
+              serait dicté par le bruit.
+            </p>
+          </Promesse>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <button
-                  onClick={() => navigate({ type: 'iq' })}
-                  className="w-full sm:w-auto px-7 py-3.5 rounded-1 bg-mesure text-noir font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>Commencer l’évaluation</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <p className="text-xs text-brume">
-                  Gratuit, sans compte, 25 à 30 minutes.
-                </p>
-              </div>
-            </div>
-
-            {/* Aperçu Visuel Carte QI */}
-            <div className="relative p-6 rounded-2 bg-graphite border border-ardoise/60">
-              <div className="flex items-center justify-between border-b border-ardoise/40 pb-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-alerte" />
-                  <div className="w-3 h-3 rounded-full bg-mesure" />
-                  <div className="w-3 h-3 rounded-full bg-mesure" />
-                </div>
-                <span className="text-[11px] nombres text-mesure">NEXUS COGNITIVE LABS</span>
-              </div>
-
-              <ul className="space-y-2.5 mb-4 text-xs text-brume">
-                <li className="p-3 rounded-1 bg-ardoise/50 border border-ardoise">
-                  Un indice estimé, <strong className="text-craie">toujours accompagné de son
-                  intervalle de confiance</strong> : la marge d’erreur fait partie du résultat.
-                </li>
-                <li className="p-3 rounded-1 bg-ardoise/50 border border-ardoise">
-                  Un profil par aptitude, avec la zone d’incertitude tracée sur le graphique.
-                </li>
-                <li className="p-3 rounded-1 bg-ardoise/50 border border-ardoise">
-                  Un centile dont la population de référence est nommée explicitement.
-                </li>
-              </ul>
-
-              <p className="p-3 rounded-1 bg-ardoise/40 border border-ardoise/40 text-xs text-brume leading-relaxed">
-                Si vos réponses ne se distinguent pas d’un tirage au hasard, aucun score n’est
-                affiché. Un chiffre inventé ne vous apprendrait rien.
-              </p>
-            </div>
-          </div>
+          <Promesse titre="Un centile situé">
+            <p className="text-petit text-brume">
+              La population de référence est nommée en toutes lettres, pour que vous
+              sachiez à qui vous êtes comparé.
+            </p>
+          </Promesse>
         </div>
       </section>
 
-      {/* SECTION 2 : 4 GRANDS PILIERS DE LA PLATEFORME */}
-      <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <h2 className="font-titre text-2xl sm:text-4xl font-bold mb-2">
-            Une Plateforme <span className="text-craie">Complète</span>
-          </h2>
-          <p className="text-brume text-xs sm:text-sm max-w-md mx-auto">
-            Chaque module est conçu pour enrichir votre culture, développer votre esprit et stimuler votre réflexion.
+      {/* ── Le refus de score ────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="border-l-2 border-mesure bg-graphite py-8 pl-6 pr-6 sm:pl-10">
+          <p className="mesure-texte text-t3 text-craie">
+            Si vos réponses ne se distinguent pas d’un tirage au hasard, aucun score n’est
+            affiché.
+          </p>
+          <p className="mesure-texte mt-3 text-petit text-brume">
+            Un test d’aptitude qui annonce un chiffre flatteur à quelqu’un qui a cliqué au
+            hasard ne mesure rien. NEXUS compare vos réponses à ce que produirait le
+            hasard, et vous montre les deux nombres.
           </p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1 : Test QI */}
-          <div
-            onClick={() => navigate({ type: 'iq' })}
-            className="p-6 rounded-2 bg-graphite border border-ardoise border border-mesure/30 hover:border-mesure/60 cursor-pointer group flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-1 bg-mesure/20 text-mesure flex items-center justify-center mb-4">
-                <Brain className="w-6 h-6" />
-              </div>
-              <h3 className="font-titre font-bold text-base text-craie group-hover:text-mesure transition-colors mb-2">
-                Aptitudes cognitives
-              </h3>
-              <p className="text-xs text-brume leading-relaxed mb-4">
-                Cinq aptitudes, 120 questions en banque, un score assorti de sa marge d’erreur.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-mesure flex items-center gap-1">
-              Passer le test →
-            </span>
-          </div>
-
-
-          {/* Card 3 : Bibliothèque Augmentée */}
-          <div
-            onClick={() => navigate({ type: 'knowledge' })}
-            className="p-6 rounded-2 bg-graphite border border-ardoise border border-mesure/30 hover:border-mesure/60 cursor-pointer group flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-1 bg-mesure/20 text-mesure flex items-center justify-center mb-4">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h3 className="font-titre font-bold text-base text-craie group-hover:text-mesure transition-colors mb-2">
-                Bibliothèque du Savoir
-              </h3>
-              <p className="text-xs text-brume leading-relaxed mb-4">
-                Empires africains, neurosciences, mécanique quantique, philosophie et économie mobile.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-mesure flex items-center gap-1">
-              Explorer les domaines →
-            </span>
-          </div>
-
-          {/* Card 4 : Pays du Monde & Quiz */}
-          <div
-            onClick={() => navigate({ type: 'countries' })}
-            className="p-6 rounded-2 bg-graphite border border-ardoise border border-mesure/30 hover:border-mesure/60 cursor-pointer group flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-1 bg-mesure/20 text-mesure flex items-center justify-center mb-4">
-                <Globe2 className="w-6 h-6" />
-              </div>
-              <h3 className="font-titre font-bold text-base text-craie group-hover:text-mesure transition-colors mb-2">
-                195 Pays & Quiz
-              </h3>
-              <p className="text-xs text-brume leading-relaxed mb-4">
-                Encyclopédie géographique exhaustive, drapeaux, capitales et 6 modes de quiz interactifs.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-mesure flex items-center gap-1">
-              Découvrir les pays →
-            </span>
-          </div>
-        </div>
       </section>
+
+      {/* ── Explorer aussi ──────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+        <h2 className="text-t2 text-craie">Explorer aussi</h2>
+
+        <ul className="mt-8 border-t border-ardoise">
+          {[
+            {
+              to: '/pays',
+              titre: '195 pays',
+              detail: 'Capitales, langues, monnaies et faits marquants.',
+            },
+            {
+              to: '/savoir',
+              titre: 'Bibliothèque du savoir',
+              detail: 'Cinquante et un sujets, des empires africains à la physique quantique.',
+            },
+            {
+              to: '/quiz',
+              titre: 'Quiz de culture générale',
+              detail: '464 questions, neuf domaines, six modes de jeu.',
+            },
+          ].map((entree) => (
+            <li key={entree.to} className="border-b border-ardoise">
+              <Link
+                to={entree.to}
+                className="flex min-h-16 flex-col justify-center gap-1 py-4 transition-colors hover:bg-graphite sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+              >
+                <span className="text-t3 text-craie">{entree.titre}</span>
+                <span className="text-petit text-brume">{entree.detail}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── Méthode ─────────────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
+        <p className="mesure-texte text-petit text-brume">
+          L’estimation repose sur un modèle de réponse à l’item à trois paramètres, sur une
+          banque de {itemBank.length} questions. Ce n’est pas un diagnostic psychologique et
+          cela ne remplace pas un bilan conduit par un psychologue.
+        </p>
+      </section>
+    </>
+  );
+}
+
+/**
+ * Une promesse du hero.
+ *
+ * Séparée de sa voisine par un filet, pas par une bordure de carte : la hiérarchie
+ * vient de l'espace et d'un trait, jamais d'un panneau posé sur le fond.
+ */
+function Promesse({
+  titre,
+  premier = false,
+  children,
+}: {
+  titre: string;
+  premier?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={
+        premier
+          ? 'sm:pr-8'
+          : 'border-t border-ardoise pt-10 sm:border-l sm:border-t-0 sm:pl-8 sm:pr-8 sm:pt-0'
+      }
+    >
+      <h3 className="text-t3 text-craie">{titre}</h3>
+      <div className="mt-4">{children}</div>
     </div>
   );
 }
