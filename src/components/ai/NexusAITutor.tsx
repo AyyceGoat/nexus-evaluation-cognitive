@@ -129,57 +129,57 @@ export function NexusAITutor() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 animate-fadeIn text-nexus-text">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 text-craie">
       {/* En-tête Tuteur AI */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-nexus-border/40">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-ardoise/40">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-mesure border border-mesure/30 text-mesure text-xs font-semibold mb-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-mesure" />
             Assistant & Tuteur d'Apprentissage
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold">
-            Nexus <span className="text-gradient">AI Tutor</span>
+          <h1 className="font-titre text-2xl sm:text-3xl font-bold">
+            Nexus <span className="text-craie">AI Tutor</span>
           </h1>
         </div>
 
         {/* Sélecteur de Mode d'Explication */}
-        <div className="flex items-center gap-1.5 bg-nexus-surface/80 p-1 rounded-2xl border border-nexus-border/60 text-xs">
+        <div className="flex items-center gap-1.5 bg-graphite/80 p-1 rounded-2 border border-ardoise/60 text-xs">
           <button
             onClick={() => setExplanationMode('simple')}
-            className={`px-3 py-1.5 rounded-xl transition-all font-medium ${
+            className={`px-3 py-1.5 rounded-1 transition-colors font-medium ${
               explanationMode === 'simple'
-                ? 'bg-nexus-accent text-white shadow-sm'
-                : 'text-nexus-muted hover:text-white'
+                ? 'bg-mesure text-noir'
+                : 'text-brume hover:text-craie'
             }`}
           >
             💡 Simple (ELI5)
           </button>
           <button
             onClick={() => setExplanationMode('deep')}
-            className={`px-3 py-1.5 rounded-xl transition-all font-medium ${
+            className={`px-3 py-1.5 rounded-1 transition-colors font-medium ${
               explanationMode === 'deep'
-                ? 'bg-nexus-accent text-white shadow-sm'
-                : 'text-nexus-muted hover:text-white'
+                ? 'bg-mesure text-noir'
+                : 'text-brume hover:text-craie'
             }`}
           >
             🔬 Approfondi
           </button>
           <button
             onClick={() => setExplanationMode('summary')}
-            className={`px-3 py-1.5 rounded-xl transition-all font-medium ${
+            className={`px-3 py-1.5 rounded-1 transition-colors font-medium ${
               explanationMode === 'summary'
-                ? 'bg-nexus-accent text-white shadow-sm'
-                : 'text-nexus-muted hover:text-white'
+                ? 'bg-mesure text-noir'
+                : 'text-brume hover:text-craie'
             }`}
           >
             📋 Fiche
           </button>
           <button
             onClick={() => setExplanationMode('quiz')}
-            className={`px-3 py-1.5 rounded-xl transition-all font-medium ${
+            className={`px-3 py-1.5 rounded-1 transition-colors font-medium ${
               explanationMode === 'quiz'
-                ? 'bg-nexus-accent text-white shadow-sm'
-                : 'text-nexus-muted hover:text-white'
+                ? 'bg-mesure text-noir'
+                : 'text-brume hover:text-craie'
             }`}
           >
             🧠 Quiz
@@ -192,13 +192,13 @@ export function NexusAITutor() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} animate-fadeIn`}
+            className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div
-              className={`p-4 sm:p-5 rounded-3xl max-w-2xl text-xs sm:text-sm leading-relaxed ${
+              className={`p-4 sm:p-5 rounded-2 max-w-2xl text-xs sm:text-sm leading-relaxed ${
                 msg.sender === 'user'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-tr-sm shadow-md'
-                  : 'glass-strong border border-nexus-border/60 text-nexus-text rounded-tl-sm shadow-xl'
+                  ? 'bg-mesure text-noir rounded-tr-sm'
+                  : 'bg-graphite border border-ardoise text-craie rounded-tl-sm'
               }`}
             >
               <div className="whitespace-pre-line prose prose-invert prose-sm max-w-none">
@@ -207,13 +207,13 @@ export function NexusAITutor() {
 
               {/* Concepts clés attachés */}
               {msg.concepts && msg.concepts.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-white/10 space-y-1.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-nexus-glow">
+                <div className="mt-4 pt-3 border-t border-ardoise space-y-1.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-mesure">
                     Concepts Clés Définis :
                   </p>
                   {msg.concepts.map((c, i) => (
-                    <div key={i} className="text-xs bg-white/5 p-2 rounded-xl border border-white/5">
-                      <strong className="text-cyan-300">{c.term}</strong> : {c.definition}
+                    <div key={i} className="text-xs bg-ardoise/50 p-2 rounded-1 border border-ardoise">
+                      <strong className="text-mesure">{c.term}</strong> : {c.definition}
                     </div>
                   ))}
                 </div>
@@ -227,7 +227,7 @@ export function NexusAITutor() {
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(p)}
-                    className="px-3 py-1.5 rounded-full bg-nexus-accent/10 hover:bg-nexus-accent/20 border border-nexus-accent/30 text-nexus-glow text-[11px] font-medium transition-all text-left"
+                    className="px-3 py-1.5 rounded-full bg-mesure/10 hover:bg-mesure/20 border border-mesure/30 text-mesure text-[11px] font-medium transition-colors text-left"
                   >
                     💬 {p}
                   </button>
@@ -238,29 +238,29 @@ export function NexusAITutor() {
         ))}
 
         {isTyping && (
-          <div className="flex items-center gap-2 p-4 rounded-2xl glass border border-nexus-border/40 text-xs text-nexus-muted w-fit animate-fadeIn">
-            <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-            <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
+          <div className="flex items-center gap-2 p-4 rounded-2 bg-graphite border border-ardoise text-xs text-brume w-fit">
+            <div className="w-2 h-2 rounded-full bg-mesure" />
+            <div className="w-2 h-2 rounded-full bg-mesure" style={{ animationDelay: '0.2s' }} />
+            <div className="w-2 h-2 rounded-full bg-mesure" style={{ animationDelay: '0.4s' }} />
             <span>Nexus AI formule votre réponse...</span>
           </div>
         )}
       </div>
 
       {/* Barre d'Envoi du Message */}
-      <div className="sticky bottom-4 p-2 rounded-2xl glass-strong border border-nexus-accent/30 shadow-2xl flex items-center gap-2">
+      <div className="sticky bottom-4 p-2 rounded-2 bg-graphite border border-ardoise border border-mesure/30 flex items-center gap-2">
         <input
           type="text"
           placeholder="Posez une question sur n'importe quel concept, science, empire ou idée..."
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-          className="flex-1 px-4 py-2.5 bg-transparent text-sm text-white placeholder-nexus-muted focus:outline-none"
+          className="flex-1 px-4 py-2.5 bg-transparent text-sm text-craie placeholder-brume"
         />
         <button
           onClick={() => handleSendMessage()}
           disabled={!inputPrompt.trim() || isTyping}
-          className="p-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+          className="p-3 rounded-1 bg-mesure text-noir hover:scale-105 active:scale-95 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Send className="w-4 h-4" />
         </button>

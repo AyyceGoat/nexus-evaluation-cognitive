@@ -5,13 +5,6 @@ export type QuizMode = 'classic' | 'timed' | 'rapid' | 'survival' | 'challenge' 
 export type Difficulty = 'all' | 'easy' | 'medium' | 'hard';
 export type GameState = 'config' | 'playing' | 'result';
 
-// Helper pour Google Analytics
-const trackQuizEvent = (eventName: string, params: Record<string, unknown>) => {
-  if (typeof window !== 'undefined' && (window as unknown as { trackEvent?: (name: string, params: Record<string, unknown>) => void }).trackEvent) {
-    (window as unknown as { trackEvent: (name: string, params: Record<string, unknown>) => void }).trackEvent(eventName, params);
-  }
-};
-
 export function useQuizGame() {
   // Config state
   const [gameState, setGameState] = useState<GameState>('config');
@@ -68,12 +61,6 @@ export function useQuizGame() {
     }
 
     if (gameOver || currentIndex + 1 >= questions.length) {
-      trackQuizEvent('quiz_complete', {
-        mode: selectedMode,
-        score,
-        total: questions.length,
-        percentage: Math.round((score / (questions.length || 1)) * 100),
-      });
       setGameState('result');
     } else {
       setCurrentIndex((i) => i + 1);
@@ -82,7 +69,7 @@ export function useQuizGame() {
       setShowFeedback(false);
       setTimeLeft(timePerQuestion);
     }
-  }, [gameOver, currentIndex, questions.length, timePerQuestion, selectedMode, score]);
+  }, [gameOver, currentIndex, questions.length, timePerQuestion]);
 
   const handleAnswer = useCallback((optIndex: number) => {
     if (answered || gameOver || !questions[currentIndex]) return;
@@ -197,12 +184,6 @@ export function useQuizGame() {
     setGameOver(false);
     setGameState('playing');
 
-    trackQuizEvent('quiz_start', {
-      mode: selectedMode,
-      categories: cats.join(','),
-      difficulty: selectedDifficulty,
-      question_count: count,
-    });
   }, [selectedCategories, selectedDifficulty, selectedMode, questionCount, timePerQuestion]);
 
   const restartQuiz = useCallback(() => {

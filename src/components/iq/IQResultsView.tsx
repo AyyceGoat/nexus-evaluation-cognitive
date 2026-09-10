@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CognitiveRadarChart } from './CognitiveRadarChart';
+import { AptitudeProfile } from './AptitudeProfile';
+import { IntervalBar } from './IntervalBar';
 import { IQCertificate } from './IQCertificate';
 import { MatrixRenderer } from './MatrixRenderer';
 import { isReportUnlocked } from '../../lib/iq/storage';
@@ -26,28 +27,28 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
   // ── Profil inexploitable : on n'affiche aucun score ────────────────────────
   if (!interpretable) {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16 text-nexus-text">
-        <div className="p-6 sm:p-8 rounded-3xl border border-amber-500/40 bg-amber-500/5">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16 text-craie">
+        <div className="p-6 sm:p-8 rounded-2 border border-mesure/40 bg-mesure/5">
           <div className="flex items-start gap-3.5">
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <AlertTriangle className="w-5 h-5 text-mesure shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <h1 className="font-display text-xl sm:text-2xl font-bold text-white mb-2">
+              <h1 className="font-titre text-xl sm:text-2xl font-bold text-craie mb-2">
                 Aucun score ne peut être calculé
               </h1>
-              <p className="text-sm text-nexus-text leading-relaxed">{report.validity.message}</p>
+              <p className="text-sm text-craie leading-relaxed">{report.validity.message}</p>
             </div>
           </div>
 
-          <dl className="mt-6 pt-6 border-t border-amber-500/20 grid grid-cols-2 gap-4 text-xs">
+          <dl className="mt-6 pt-6 border-t border-mesure/20 grid grid-cols-2 gap-4 text-xs">
             <div>
-              <dt className="text-nexus-muted">Bonnes réponses</dt>
-              <dd className="text-white font-semibold tabular-nums mt-0.5">
+              <dt className="text-brume">Bonnes réponses</dt>
+              <dd className="text-craie font-semibold tabular-nums mt-0.5">
                 {report.correctCount} sur {report.itemCount}
               </dd>
             </div>
             <div>
-              <dt className="text-nexus-muted">Attendu en répondant au hasard</dt>
-              <dd className="text-white font-semibold tabular-nums mt-0.5">
+              <dt className="text-brume">Attendu en répondant au hasard</dt>
+              <dd className="text-craie font-semibold tabular-nums mt-0.5">
                 environ {report.validity.expectedByChance}
               </dd>
             </div>
@@ -57,7 +58,7 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
         <button
           type="button"
           onClick={onRestart}
-          className="mt-8 min-h-11 px-6 rounded-xl bg-nexus-accent text-white text-sm font-semibold inline-flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nexus-accent"
+          className="mt-8 min-h-11 px-6 rounded-1 bg-mesure text-noir text-sm font-semibold inline-flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
         >
           <RotateCcw className="w-4 h-4" aria-hidden="true" />
           Repasser l’évaluation
@@ -67,45 +68,36 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 text-nexus-text">
-      <h1 className="font-display text-2xl sm:text-4xl font-bold mb-8">Votre résultat</h1>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 text-craie">
+      <h1 className="font-titre text-2xl sm:text-4xl font-bold mb-8">Votre résultat</h1>
 
       {/* ── Score, intervalle, percentile ───────────────────────────────────── */}
-      <section className="p-6 sm:p-8 rounded-3xl bg-nexus-surface/60 border border-nexus-border/50 mb-6">
-        <p className="text-xs text-nexus-muted mb-1">Indice estimé</p>
-        <p className="font-display text-5xl sm:text-6xl font-bold text-white tabular-nums leading-none">
-          {report.scaled.point}
-        </p>
-        <p className="text-sm text-nexus-muted mt-3 tabular-nums">
-          Intervalle de confiance à 95 % : {report.scaled.lower95} – {report.scaled.upper95}
-        </p>
+      <section className="p-6 sm:p-8 rounded-2 bg-graphite border border-ardoise mb-6">
+        <p className="text-micro text-brume mb-4">Indice estimé</p>
 
-        <p className="text-xs text-nexus-muted leading-relaxed mt-4 max-w-prose">
-          Le chiffre central est l’estimation la plus probable ; l’intervalle indique où se
-          situe réellement votre niveau. C’est l’intervalle qu’il faut lire, pas le chiffre seul.
-        </p>
+        <IntervalBar scaled={report.scaled} />
 
         {report.percentile !== null && (
-          <p className="text-sm text-nexus-text mt-5 pt-5 border-t border-nexus-border/40">
-            Vous vous situez au <strong className="tabular-nums">{report.percentile}ᵉ</strong> centile,{' '}
-            <span className="text-nexus-muted">{report.norm.label}.</span>
+          <p className="text-petit text-craie mt-6 pt-6 border-t border-ardoise">
+            Vous vous situez au <strong className="nombres">{report.percentile}ᵉ</strong> centile,{' '}
+            <span className="text-brume">{report.norm.label}.</span>
           </p>
         )}
 
         {report.validity.message && (
-          <p className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 leading-relaxed">
+          <p className="mt-4 border-l-2 border-mesure pl-4 text-micro text-brume leading-relaxed">
             {report.validity.message}
           </p>
         )}
       </section>
 
-      <p className="text-xs text-nexus-muted leading-relaxed mb-8 max-w-prose">
+      <p className="text-xs text-brume leading-relaxed mb-8 max-w-prose">
         Cette évaluation est un outil d’entraînement et d’auto-évaluation. Elle ne constitue pas
         un diagnostic psychologique et ne remplace pas un bilan conduit par un psychologue.
       </p>
 
       {/* ── Onglets ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1 border-b border-nexus-border/40 mb-8" role="tablist">
+      <div className="flex items-center gap-1 border-b border-ardoise/40 mb-8" role="tablist">
         {(
           [
             ['profil', 'Profil'],
@@ -119,10 +111,10 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`min-h-11 px-4 text-sm font-medium border-b-2 -mb-px transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nexus-accent ${
+            className={`min-h-11 px-4 text-sm font-medium border-b-2 -mb-px transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure ${
               tab === id
-                ? 'border-nexus-accent text-white'
-                : 'border-transparent text-nexus-muted hover:text-white'
+                ? 'border-mesure text-craie'
+                : 'border-transparent text-brume hover:text-craie'
             }`}
           >
             {label}
@@ -132,40 +124,11 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
 
       {/* ── Profil par aptitude (gratuit) ───────────────────────────────────── */}
       {tab === 'profil' && (
-        <section>
-          <div className="flex justify-center mb-6">
-            <CognitiveRadarChart results={report.aptitudes} />
-          </div>
-
-          <p className="text-xs text-nexus-muted leading-relaxed max-w-prose mb-6">
-            La zone ombrée figure la marge d’erreur de chaque aptitude. Elle est large : sept
-            questions par aptitude suffisent à dégager une tendance, pas à établir un écart fin.
-          </p>
-
-          {report.strengths.length > 0 && (
-            <p className="text-sm mb-2">
-              <span className="text-nexus-muted">Ressort nettement : </span>
-              <strong className="text-white">
-                {report.strengths.map((a) => APTITUDE_LABEL[a]).join(', ')}
-              </strong>
-            </p>
-          )}
-          {report.weaknesses.length > 0 && (
-            <p className="text-sm mb-2">
-              <span className="text-nexus-muted">À travailler : </span>
-              <strong className="text-white">
-                {report.weaknesses.map((a) => APTITUDE_LABEL[a]).join(', ')}
-              </strong>
-            </p>
-          )}
-          {report.strengths.length === 0 && report.weaknesses.length === 0 && (
-            <p className="text-sm text-nexus-muted max-w-prose">
-              Aucune aptitude ne se détache franchement des autres. Sur une passation de cette
-              longueur, c’est le résultat le plus fréquent, et il est plus fiable qu’un classement
-              qui serait dicté par le hasard.
-            </p>
-          )}
-        </section>
+        <AptitudeProfile
+          aptitudes={report.aptitudes}
+          forces={report.strengths}
+          faiblesses={report.weaknesses}
+        />
       )}
 
       {/* ── Corrections (réservées) ─────────────────────────────────────────── */}
@@ -183,22 +146,22 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                 return (
                   <li
                     key={item.id}
-                    className={`rounded-2xl border overflow-hidden ${
+                    className={`rounded-2 border overflow-hidden ${
                       response.correct
-                        ? 'border-emerald-500/30 bg-emerald-500/5'
-                        : 'border-nexus-border/50 bg-nexus-surface/40'
+                        ? 'border-mesure/30 bg-mesure/5'
+                        : 'border-ardoise/50 bg-graphite/40'
                     }`}
                   >
                     <button
                       type="button"
                       aria-expanded={open}
                       onClick={() => setExpanded(open ? null : item.id)}
-                      className="w-full min-h-11 p-4 flex items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nexus-accent"
+                      className="w-full min-h-11 p-4 flex items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
                     >
                       <span className="text-sm">
-                        <span className="text-nexus-muted mr-2 tabular-nums">{position + 1}.</span>
-                        <span className="text-white">{APTITUDE_LABEL[item.aptitude]}</span>
-                        <span className="ml-2 text-xs text-nexus-muted">
+                        <span className="text-brume mr-2 tabular-nums">{position + 1}.</span>
+                        <span className="text-craie">{APTITUDE_LABEL[item.aptitude]}</span>
+                        <span className="ml-2 text-xs text-brume">
                           {response.correct ? 'réussie' : 'manquée'}
                         </span>
                       </span>
@@ -210,7 +173,7 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                     </button>
 
                     {open && (
-                      <div className="p-4 sm:p-6 border-t border-nexus-border/40 space-y-4">
+                      <div className="p-4 sm:p-6 border-t border-ardoise/40 space-y-4">
                         <p className="text-sm whitespace-pre-line">{item.prompt}</p>
 
                         {item.visual && (
@@ -231,12 +194,12 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                               return (
                                 <li
                                   key={option}
-                                  className={`p-3 rounded-xl border text-xs ${
+                                  className={`p-3 rounded-1 border text-xs ${
                                     isCorrect
-                                      ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200'
+                                      ? 'border-mesure/60 bg-mesure/15 text-mesure'
                                       : isChosen
-                                        ? 'border-rose-500/60 bg-rose-500/10 text-rose-200'
-                                        : 'border-nexus-border/40 text-nexus-muted'
+                                        ? 'border-alerte/60 bg-alerte/10 text-alerte'
+                                        : 'border-ardoise/40 text-brume'
                                   }`}
                                 >
                                   {option}
@@ -250,9 +213,9 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                           </ul>
                         )}
 
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-nexus-border/40">
-                          <p className="text-sm text-nexus-text mb-2">{item.explanation}</p>
-                          <ol className="space-y-1 text-xs text-nexus-muted list-decimal list-inside">
+                        <div className="p-4 rounded-1 bg-ardoise/40 border border-ardoise/40">
+                          <p className="text-sm text-craie mb-2">{item.explanation}</p>
+                          <ol className="space-y-1 text-xs text-brume list-decimal list-inside">
                             {item.reasoning.map((step) => (
                               <li key={step}>{step}</li>
                             ))}
@@ -279,11 +242,11 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
         </section>
       )}
 
-      <div className="mt-12 pt-8 border-t border-nexus-border/30">
+      <div className="mt-12 pt-8 border-t border-ardoise/30">
         <button
           type="button"
           onClick={onRestart}
-          className="min-h-11 px-6 rounded-xl border border-nexus-border/50 text-sm font-semibold text-nexus-muted hover:text-white inline-flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nexus-accent"
+          className="min-h-11 px-6 rounded-1 border border-ardoise/50 text-sm font-semibold text-brume hover:text-craie inline-flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
         >
           <RotateCcw className="w-4 h-4" aria-hidden="true" />
           Repasser l’évaluation
@@ -302,10 +265,10 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
  */
 function LockedNotice({ label }: { label: string }) {
   return (
-    <div className="p-6 sm:p-8 rounded-3xl border border-nexus-border/50 bg-nexus-surface/40 max-w-lg">
-      <Lock className="w-6 h-6 text-nexus-muted mb-4" aria-hidden="true" />
-      <h2 className="font-display text-lg font-bold text-white mb-2">Section réservée</h2>
-      <p className="text-sm text-nexus-muted leading-relaxed">
+    <div className="p-6 sm:p-8 rounded-2 border border-ardoise/50 bg-graphite/40 max-w-lg">
+      <Lock className="w-6 h-6 text-brume mb-4" aria-hidden="true" />
+      <h2 className="font-titre text-lg font-bold text-craie mb-2">Section réservée</h2>
+      <p className="text-sm text-brume leading-relaxed">
         Le rapport complet comprend {label}. Le paiement par mobile money est en cours
         d’intégration : cette section s’ouvrira dès qu’il sera opérationnel.
       </p>

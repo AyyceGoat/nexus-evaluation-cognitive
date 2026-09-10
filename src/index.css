@@ -1,285 +1,225 @@
 @import "tailwindcss";
 
+/* Polices auto-hébergées. Les fichiers portent un `unicode-range`, donc le navigateur
+   ne télécharge que le sous-ensemble latin pour du texte français : 28 ko + 44 ko.
+   Remplace la feuille de style bloquante vers fonts.googleapis.com, qui chargeait
+   douze graisses. */
+@import "@fontsource-variable/public-sans/wght.css";
+@import "@fontsource-variable/bricolage-grotesque/wght.css";
+
+/* ════════════════════════════════════════════════════════════════════════
+   TOKENS — la seule source de vérité. Voir docs/DESIGN.md.
+   Aucune valeur de couleur, de rayon ou de durée ne doit apparaître
+   ailleurs que dans ce bloc. Vérifié par scripts/verifie-tokens.mjs.
+   ════════════════════════════════════════════════════════════════════════ */
 @theme {
-  --color-nexus-bg: #050510;
-  --color-nexus-surface: #0a0a1a;
-  --color-nexus-card: #0f0f23;
-  --color-nexus-border: #1a1a3e;
-  --color-nexus-accent: #6366f1;
-  --color-nexus-glow: #818cf8;
-  --color-nexus-text: #e2e8f0;
-  --color-nexus-muted: #64748b;
-  --color-nexus-gold: #f59e0b;
-  --font-family-display: 'Space Grotesk', sans-serif;
-  --font-family-body: 'Inter', sans-serif;
+  /* Palette — six couleurs, plus une fonctionnelle.
+     Contrastes calculés dans scripts/contrast.mjs. */
+  --color-noir: #000000;
+  --color-graphite: #141414;
+  --color-ardoise: #232323;
+  --color-brume: #8a8a8a;
+  --color-craie: #f2f0ec;
+  --color-mesure: #5fb3a8;
+  --color-alerte: #e8877a;
+
+  /* Familles. Bricolage pour les titres, Public Sans pour tout le reste,
+     chiffres compris — cf. DESIGN.md §3.1. */
+  --font-titre: "Bricolage Grotesque Variable", "Public Sans Variable", system-ui, sans-serif;
+  --font-corps: "Public Sans Variable", system-ui, -apple-system, sans-serif;
+
+  /* Échelle typographique. L'échelle d'espacement de Tailwind (base 4 px)
+     coïncide déjà avec celle de DESIGN.md §4.1 : rien à redéfinir. */
+  --text-display: 3.5rem;
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 600;
+
+  --text-t1: 2.25rem;
+  --text-t1--line-height: 1.1;
+  --text-t1--letter-spacing: -0.02em;
+  --text-t1--font-weight: 600;
+
+  --text-t2: 1.5rem;
+  --text-t2--line-height: 1.2;
+  --text-t2--letter-spacing: -0.01em;
+  --text-t2--font-weight: 600;
+
+  --text-t3: 1.125rem;
+  --text-t3--line-height: 1.3;
+  --text-t3--font-weight: 550;
+
+  --text-corps: 1rem;
+  --text-corps--line-height: 1.6;
+
+  --text-petit: 0.875rem;
+  --text-petit--line-height: 1.5;
+
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.01em;
+  --text-micro--font-weight: 500;
+
+  /* Rayons — le rayon encode le niveau, il n'est pas décoratif. */
+  --radius-0: 0px;
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-3: 8px;
+
+  /* Motion — une seule courbe. */
+  --ease-nexus: cubic-bezier(0.2, 0, 0, 1);
+  --duree-1: 120ms;
+  --duree-2: 200ms;
+  --duree-3: 320ms;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BASE
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: dark;
+  /* Une seule ombre dans tout le système, réservée au calque de dialogue. */
+  --ombre-dialogue: 0 24px 64px -12px rgb(0 0 0 / 0.8);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1a1a3e #050510;
+  scrollbar-color: var(--color-ardoise) var(--color-noir);
 }
 
 html {
-  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background: #050510;
-  color: #e2e8f0;
-  overflow-x: hidden;
+  margin: 0;
+  background: var(--color-noir);
+  color: var(--color-craie);
+  font-family: var(--font-corps);
+  font-size: var(--text-corps);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Pas de `overflow-x: hidden` sur body : masquer un débordement empêche de le
+   corriger. S'il y a débordement, il doit se voir et être réparé. */
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-titre);
+  margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: #fff;
+  background: var(--color-mesure);
+  color: var(--color-noir);
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+/* Focus visible partout, sans exception. Les composants n'ont pas le droit de
+   poser `outline: none` sans remplacement. */
+:focus-visible {
+  outline: 2px solid var(--color-mesure);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.1); }
-  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.3); }
+/* Empêche le zoom automatique iOS à la mise au point d'un champ. */
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: max(1rem, var(--text-corps));
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.5s ease-out forwards;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.3s ease-out forwards;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-.glass {
-  background: rgba(15, 15, 35, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(99, 102, 241, 0.1);
-}
-
-.glass-strong {
-  background: rgba(15, 15, 35, 0.85);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-}
-
-.glow-border {
-  position: relative;
-}
-
-.glow-border::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.1), rgba(99,102,241,0.3));
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.glow-border:hover::before {
-  opacity: 1;
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-gradient-gold {
-  background: linear-gradient(135deg, #f59e0b, #fbbf24, #d97706);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.bg-mesh {
-  background-image: 
-    radial-gradient(at 40% 20%, rgba(99,102,241,0.08) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(139,92,246,0.06) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(99,102,241,0.05) 0px, transparent 50%),
-    radial-gradient(at 80% 60%, rgba(59,130,246,0.04) 0px, transparent 50%);
-}
-
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-}
-
-.card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(99, 102, 241, 0.1);
-}
-
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
-.stagger-7 { animation-delay: 0.35s; }
-.stagger-8 { animation-delay: 0.4s; }
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.particle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  background: rgba(99, 102, 241, 0.4);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-/* Touch optimizations */
-@media (hover: none) {
-  .card-hover:hover {
-    transform: none;
-  }
-  
-  .card-hover:active {
-    transform: scale(0.98);
-  }
-}
-
-/* Safe area for mobile devices with notches */
-@supports (padding: max(0px)) {
-  .safe-bottom {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-  
-  .safe-top {
-    padding-top: max(1rem, env(safe-area-inset-top));
-  }
-}
-
-/* Better tap targets on mobile */
-@media (max-width: 640px) {
-  button, a {
-    min-height: 44px;
-  }
-}
-
-/* Prevent text selection on interactive elements */
-button, [role="button"] {
-  -webkit-user-select: none;
-  user-select: none;
+button {
+  font: inherit;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Smooth scrolling container */
-.scroll-smooth-x {
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
+/* Toute donnée numérique s'aligne en colonne. */
+.nombres {
+  font-variant-numeric: tabular-nums;
 }
 
-.scroll-smooth-x::-webkit-scrollbar {
-  display: none;
+/* Longueur de ligne lisible : 66 caractères visés. */
+.mesure-texte {
+  max-width: 34rem;
 }
 
-/* Fix for iOS input zoom */
-@media screen and (max-width: 640px) {
-  input, select, textarea {
-    font-size: 16px !important;
+/* ════════════════════════════════════════════════════════════════════════
+   MOTION — on anime ce que l'utilisateur vient de provoquer, rien d'autre.
+   Aucune entrée au défilement, aucune boucle décorative.
+   ════════════════════════════════════════════════════════════════════════ */
+
+@keyframes pouls-squelette {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
   }
 }
 
-/* Loading skeleton shimmer */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.03) 25%,
-    rgba(255,255,255,0.08) 50%,
-    rgba(255,255,255,0.03) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+/* Squelette de chargement : la seule boucle du système, et elle ne tourne que
+   pendant un chargement réel. */
+.squelette {
+  background: var(--color-ardoise);
+  animation: pouls-squelette 1.4s var(--ease-nexus) infinite;
 }
 
-/* Quiz timer pulse */
-@keyframes timer-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+@keyframes apparition-dialogue {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.timer-critical {
-  animation: timer-pulse 0.5s ease-in-out infinite;
+.dialogue-entre {
+  animation: apparition-dialogue var(--duree-2) var(--ease-nexus);
 }
 
-/* Combo animation */
-@keyframes combo-pop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-.combo-pop {
-  animation: combo-pop 0.3s ease-out;
-}
+/* ════════════════════════════════════════════════════════════════════════
+   IMPRESSION — attestation de passation
+   ════════════════════════════════════════════════════════════════════════ */
 
-/* Print styles for IQ Certificate */
 @media print {
   body {
-    background: #000 !important;
-    color: #fff !important;
+    background: #fff;
+    color: #000;
   }
-  nav, footer, .no-print, button {
+
+  nav,
+  footer,
+  .no-print,
+  button {
     display: none !important;
   }
+
   main {
     padding: 0 !important;
     margin: 0 !important;

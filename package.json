@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/verifie-tokens.mjs",
     "test": "vitest run",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verifie:design": "node scripts/verifie-tokens.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/public-sans": "^5.3.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "2.1.1",
     "lucide-react": "^1.38.0",

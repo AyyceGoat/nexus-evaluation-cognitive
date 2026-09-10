@@ -203,16 +203,16 @@ function renderShape(shape: MatrixCellShape, index: number) {
 export function SingleCellSvg({ cell, isQuestion = false }: { cell: MatrixCell; isQuestion?: boolean }) {
   if (isQuestion || cell.text === '?') {
     return (
-      <svg viewBox="0 0 80 80" className="w-full h-full">
-        <rect x="2" y="2" width="76" height="76" rx="10" fill="rgba(99, 102, 241, 0.05)" stroke="rgba(99, 102, 241, 0.4)" strokeDasharray="4 4" strokeWidth="2" />
-        <text x="40" y="49" textAnchor="middle" fill="#818cf8" fontSize="26" fontWeight="bold" fontFamily="monospace">?</text>
+      <svg viewBox="0 0 80 80" className="w-full h-full" role="img" aria-label="Case à compléter">
+        <rect x="2" y="2" width="76" height="76" rx="2" fill="none" stroke="var(--color-mesure)" strokeDasharray="4 4" strokeWidth="2" />
+        <text x="40" y="50" textAnchor="middle" fill="var(--color-mesure)" fontSize="26" fontWeight="600">?</text>
       </svg>
     );
   }
 
   return (
-    <svg viewBox="0 0 80 80" className="w-full h-full drop-shadow-sm">
-      <rect x="2" y="2" width="76" height="76" rx="10" fill="rgba(15, 15, 35, 0.7)" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1.5" />
+    <svg viewBox="0 0 80 80" className="w-full h-full" aria-hidden="true">
+      <rect x="2" y="2" width="76" height="76" rx="2" fill="var(--color-graphite)" stroke="var(--color-ardoise)" strokeWidth="1.5" />
       {cell.shapes.map((shape, i) => renderShape(shape, i))}
     </svg>
   );
@@ -232,13 +232,13 @@ function MatrixRendererComponent({
   return (
     <div className="flex flex-col items-center gap-6 my-4">
       {/* Grille Matrice Principale */}
-      <div className={`grid ${gridClass} gap-2.5 sm:gap-3.5 p-3.5 sm:p-4 rounded-2xl glass-strong border border-nexus-border/60 shadow-xl shadow-indigo-950/40 w-full mx-auto`}>
+      <div className={`grid ${gridClass} gap-2.5 sm:gap-3.5 p-3.5 sm:p-4 rounded-2 bg-graphite border border-ardoise w-full mx-auto`}>
         {matrixData.cells.map((cell, idx) => {
           const isMissing = idx === matrixData.cells.length - 1 && cell.text === '?';
           return (
             <div
               key={cell.id || idx}
-              className="aspect-square flex items-center justify-center p-1 relative rounded-xl overflow-hidden transition-all duration-300"
+              className="aspect-square flex items-center justify-center p-1 relative rounded-1 overflow-hidden transition-colors duration-300"
             >
               <SingleCellSvg cell={cell} isQuestion={isMissing} />
             </div>
@@ -249,7 +249,7 @@ function MatrixRendererComponent({
       {/* Options de Choix */}
       {matrixData.options && matrixData.options.length > 0 && (
         <div className="w-full max-w-xl">
-          <p className="text-xs uppercase tracking-wider text-nexus-muted text-center font-medium mb-3">
+          <p className="text-xs uppercase tracking-wider text-brume text-center font-medium mb-3">
             Sélectionnez la figure correspondante :
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -257,15 +257,15 @@ function MatrixRendererComponent({
               const isSelected = selectedOptionIndex === idx;
               const isTheCorrect = idx === correctOptionIndex;
               
-              let borderClass = 'border-nexus-border/40 hover:border-nexus-accent/50 bg-nexus-surface/50';
+              let borderClass = 'border-ardoise/40 hover:border-mesure/50 bg-graphite/50';
               if (showCorrect) {
                 if (isTheCorrect) {
-                  borderClass = 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/30';
+                  borderClass = 'border-mesure bg-mesure/15 ring-2 ring-mesure/30';
                 } else if (isSelected && !isTheCorrect) {
-                  borderClass = 'border-rose-500 bg-rose-500/15 ring-2 ring-rose-500/30';
+                  borderClass = 'border-alerte bg-alerte/15 ring-2 ring-alerte/30';
                 }
               } else if (isSelected) {
-                borderClass = 'border-nexus-accent bg-nexus-accent/20 ring-2 ring-nexus-accent/40 shadow-lg shadow-indigo-500/20';
+                borderClass = 'border-mesure bg-mesure/20 ring-2 ring-mesure/40';
               }
 
               return (
@@ -274,12 +274,12 @@ function MatrixRendererComponent({
                   type="button"
                   disabled={disabled}
                   onClick={() => onSelectOption && onSelectOption(idx)}
-                  className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed ${borderClass}`}
+                  className={`p-2.5 rounded-1 border flex flex-col items-center gap-1.5 transition-colors duration-200 active:scale-95 disabled:cursor-not-allowed ${borderClass}`}
                 >
                   <div className="w-16 h-16 sm:w-20 sm:h-20 aspect-square">
                     <SingleCellSvg cell={option} />
                   </div>
-                  <span className="text-xs font-semibold text-nexus-muted">
+                  <span className="text-xs font-semibold text-brume">
                     Option {idx + 1}
                   </span>
                 </button>

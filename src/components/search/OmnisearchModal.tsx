@@ -176,25 +176,25 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-2xl rounded-3xl glass-strong border border-nexus-accent/30 shadow-2xl overflow-hidden flex flex-col text-nexus-text">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-noir/80">
+      <div className="w-full max-w-2xl rounded-2 bg-graphite border border-ardoise border border-mesure/30 overflow-hidden flex flex-col text-craie">
         {/* Champ de Recherche */}
-        <div className="p-4 sm:p-5 border-b border-nexus-border/50 flex items-center gap-3">
-          <Search className="w-5 h-5 text-nexus-accent shrink-0" />
+        <div className="p-4 sm:p-5 border-b border-ardoise/50 flex items-center gap-3">
+          <Search className="w-5 h-5 text-mesure shrink-0" />
           <input
             ref={inputRef}
             type="text"
             placeholder="Rechercher un concept, pays, test de QI, domaine..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent text-sm sm:text-base text-white placeholder-nexus-muted focus:outline-none"
+            className="w-full bg-transparent text-sm sm:text-base text-craie placeholder-brume"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="p-1 text-nexus-muted hover:text-white">
+            <button onClick={() => setQuery('')} className="p-1 text-brume hover:text-craie">
               <X className="w-4 h-4" />
             </button>
           )}
-          <kbd className="hidden sm:inline-block px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-nexus-muted font-mono">
+          <kbd className="hidden sm:inline-block px-2 py-0.5 rounded bg-ardoise/50 border border-ardoise text-[10px] text-brume nombres">
             ESC
           </kbd>
         </div>
@@ -202,8 +202,8 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
         {/* Liste des Résultats */}
         <div className="max-h-[60vh] overflow-y-auto p-3 space-y-1.5">
           {results.length === 0 ? (
-            <div className="py-12 text-center text-nexus-muted text-sm">
-              Aucun résultat trouvé pour « <strong className="text-white">{query}</strong> ».
+            <div className="py-12 text-center text-brume text-sm">
+              Aucun résultat trouvé pour « <strong className="text-craie">{query}</strong> ».
             </div>
           ) : (
             results.map((item, idx) => {
@@ -213,26 +213,26 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
                   key={item.id}
                   onClick={item.action}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full p-3.5 rounded-2xl flex items-center justify-between text-left transition-all ${
+                  className={`w-full p-3.5 rounded-2 flex items-center justify-between text-left transition-colors ${
                     isSelected
-                      ? 'bg-nexus-accent/20 border border-nexus-accent/40 text-white'
-                      : 'hover:bg-white/5 border border-transparent text-nexus-muted'
+                      ? 'bg-mesure/20 border border-mesure/40 text-craie'
+                      : 'hover:bg-ardoise/50 border border-transparent text-brume'
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg shrink-0">
+                    <div className="w-9 h-9 rounded-1 bg-ardoise/50 border border-ardoise flex items-center justify-center text-lg shrink-0">
                       {item.icon}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-xs sm:text-sm text-white truncate">
+                        <p className="font-semibold text-xs sm:text-sm text-craie truncate">
                           {item.title}
                         </p>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-nexus-muted shrink-0">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-ardoise/50 text-brume shrink-0">
                           {item.category}
                         </span>
                       </div>
-                      <p className="text-[11px] text-nexus-muted truncate mt-0.5">
+                      <p className="text-[11px] text-brume truncate mt-0.5">
                         {item.subtitle}
                       </p>
                     </div>
@@ -240,7 +240,7 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
 
                   <ArrowRight
                     className={`w-4 h-4 shrink-0 transition-transform ml-2 ${
-                      isSelected ? 'text-nexus-glow translate-x-0.5' : 'opacity-0'
+                      isSelected ? 'text-mesure translate-x-0.5' : 'opacity-0'
                     }`}
                   />
                 </button>
@@ -250,13 +250,13 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
         </div>
 
         {/* Pied de modal avec raccourcis */}
-        <div className="p-3 bg-nexus-surface/60 border-t border-nexus-border/40 text-[11px] text-nexus-muted flex items-center justify-between px-5">
+        <div className="p-3 bg-graphite/60 border-t border-ardoise/40 text-[11px] text-brume flex items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <span>↑↓ pour naviguer</span>
             <span>•</span>
             <span>Entrée pour ouvrir</span>
           </div>
-          <span className="text-nexus-glow font-medium">NEXUS Omnisearch</span>
+          <span className="text-mesure font-medium">NEXUS Omnisearch</span>
         </div>
       </div>
     </div>

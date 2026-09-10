@@ -89,9 +89,9 @@ function pathToPage(pathname: string): Page {
 function LoadingFallback() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
-      <div className="text-center animate-fadeIn">
-        <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-nexus-accent border-t-transparent animate-spin" />
-        <p className="text-nexus-muted font-light text-xs sm:text-sm">Chargement de NEXUS...</p>
+      <div className="text-center">
+        <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-mesure border-t-transparent animate-spin" />
+        <p className="text-brume font-light text-xs sm:text-sm">Chargement de NEXUS...</p>
       </div>
     </div>
   );
@@ -226,17 +226,22 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, []);
 
-  const navItems = useMemo(() => [
-    { label: 'Accueil', icon: '◈', page: { type: 'home' as const } },
-    { label: 'Aptitudes', icon: '🧠', isSpecial: true, page: { type: 'iq' as const } },
-    { label: 'Nexus AI', icon: '✨', page: { type: 'ai' as const } },
-    { label: 'Savoir', icon: '📚', page: { type: 'knowledge' as const, categoryId: undefined } },
-    { label: 'Pays', icon: '🌍', page: { type: 'countries' as const } },
-    { label: 'Quiz', icon: '🎮', page: { type: 'quiz' as const } },
-  ], []);
+  // Plus d'emoji comme icône structurelle : un emoji change de dessin à chaque
+  // système d'exploitation, on ne construit pas une identité dessus (DESIGN.md §11).
+  const navItems = useMemo(
+    () => [
+      { label: 'Accueil', page: { type: 'home' as const } },
+      { label: 'Évaluation', page: { type: 'iq' as const }, principal: true },
+      { label: 'Savoir', page: { type: 'knowledge' as const, categoryId: undefined } },
+      { label: 'Pays', page: { type: 'countries' as const } },
+      { label: 'Quiz', page: { type: 'quiz' as const } },
+      { label: 'Nexus AI', page: { type: 'ai' as const } },
+    ],
+    []
+  );
 
   return (
-    <div className="min-h-screen bg-nexus-bg bg-mesh text-nexus-text">
+    <div className="min-h-screen bg-noir text-craie">
       {/* Omnisearch : monté à la première ouverture seulement, pour que ses données
           ne soient téléchargées que par les utilisateurs qui s'en servent. */}
       {isSearchOpen && (
@@ -249,112 +254,107 @@ export default function App() {
         </Suspense>
       )}
 
-      {/* Navigation Principale */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-strong border-b border-nexus-border/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            {/* Logo */}
-            <button onClick={() => navigate({ type: 'home' })} className="flex items-center gap-2 sm:gap-3 group">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-amber-500 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
-                N
-              </div>
-              <span className="font-display text-base sm:text-lg font-bold tracking-tight">
-                <span className="text-gradient">NEXUS</span>
-                <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">2.0</span>
-              </span>
+      <a
+        href="#contenu"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-60 focus:rounded-1 focus:bg-mesure focus:px-4 focus:py-2 focus:text-petit focus:text-noir"
+      >
+        Aller au contenu
+      </a>
+
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-ardoise bg-noir/95">
+        <nav aria-label="Navigation principale" className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex h-14 items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => navigate({ type: 'home' })}
+              className="font-titre text-t3 tracking-tight text-craie"
+            >
+              NEXUS
             </button>
 
-            {/* Desktop Nav Items */}
-            <div className="hidden lg:flex items-center gap-1">
+            <ul className="hidden items-center gap-1 lg:flex">
               {navItems.map((item) => {
-                const isActive = page.type === item.page.type;
-                if (item.isSpecial) {
-                  return (
+                const actif = page.type === item.page.type;
+                return (
+                  <li key={item.label}>
                     <button
-                      key={item.label}
+                      type="button"
                       onClick={() => navigate(item.page as Page)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 ring-1 ring-amber-400'
-                          : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30'
+                      aria-current={actif ? 'page' : undefined}
+                      className={`min-h-11 rounded-1 px-3 text-petit transition-colors ${
+                        actif
+                          ? 'text-craie'
+                          : item.principal
+                            ? 'text-mesure hover:text-craie'
+                            : 'text-brume hover:text-craie'
                       }`}
                     >
-                      <span>{item.icon}</span>
-                      <span>{item.label}</span>
+                      {item.label}
+                      {actif && (
+                        <span aria-hidden="true" className="mt-1 block h-px bg-mesure" />
+                      )}
                     </button>
-                  );
-                }
-
-                return (
-                  <button
-                    key={item.label}
-                    onClick={() => navigate(item.page as Page)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-nexus-accent/20 text-nexus-glow border border-nexus-accent/40'
-                        : 'text-nexus-muted hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <span>{item.icon}</span>
-                    <span>{item.label}</span>
-                  </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
-            {/* Actions à Droite : Recherche & Menu Mobile */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => setIsSearchOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl glass hover:bg-white/10 text-xs text-nexus-muted hover:text-white transition-colors border border-nexus-border/50"
-                title="Rechercher (Ctrl+K)"
+                className="flex min-h-11 items-center gap-2 rounded-1 px-3 text-petit text-brume transition-colors hover:text-craie"
               >
-                <Search className="w-3.5 h-3.5 text-nexus-accent" />
-                <span className="hidden sm:inline">Recherche</span>
-                <kbd className="hidden sm:inline-block px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-[9px] font-mono">
+                <Search className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Rechercher</span>
+                <kbd className="nombres hidden rounded-1 border border-ardoise px-1.5 text-micro text-brume sm:inline">
                   Ctrl K
                 </kbd>
               </button>
 
-              {/* Bouton Menu Mobile */}
               <button
+                type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="lg:hidden p-2 rounded-xl hover:bg-white/5 text-nexus-muted hover:text-white transition-colors"
-                aria-label="Menu"
+                aria-expanded={menuOpen}
+                aria-controls="menu-mobile"
+                aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+                className="flex h-11 w-11 items-center justify-center rounded-1 text-brume transition-colors hover:text-craie lg:hidden"
               >
-                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {menuOpen ? (
+                  <X className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Menu className="h-5 w-5" aria-hidden="true" />
+                )}
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Menu Mobile Déroulant */}
-        {menuOpen && (
-          <div className="lg:hidden border-t border-nexus-border/50 bg-nexus-surface/95 backdrop-blur-xl animate-fadeIn">
-            <div className="px-4 py-3 space-y-1.5">
-              {navItems.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.page as Page)}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-between ${
-                    page.type === item.page.type
-                      ? 'bg-nexus-accent/20 text-nexus-glow border border-nexus-accent/40'
-                      : 'text-nexus-muted hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </nav>
+          {menuOpen && (
+            <ul id="menu-mobile" className="border-t border-ardoise py-2 lg:hidden">
+              {navItems.map((item) => {
+                const actif = page.type === item.page.type;
+                return (
+                  <li key={item.label}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(item.page as Page)}
+                      aria-current={actif ? 'page' : undefined}
+                      className={`flex min-h-11 w-full items-center px-1 text-left text-petit transition-colors ${
+                        actif ? 'text-craie' : 'text-brume hover:text-craie'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </nav>
+      </header>
 
-      {/* Contenu Principal avec Suspense & ErrorBoundary */}
-      <main className="pt-14 sm:pt-16">
+
+      <main id="contenu" className="pt-14">
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
             {page.type === 'home' && <HomePage navigate={navigate} />}
@@ -375,34 +375,30 @@ export default function App() {
         </ErrorBoundary>
       </main>
 
-      {/* Pied de Page Futuriste */}
-      <footer className="border-t border-nexus-border/30 mt-20 bg-nexus-surface/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                N
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gradient">NEXUS 2.0</p>
-                <p className="text-xs text-nexus-muted">Plateforme d'Intelligence, Savoir & Évaluation Cognitive</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-xs text-nexus-muted">
-              <button onClick={() => navigate({ type: 'iq' })} className="hover:text-white transition-colors">Test de QI</button>
-              <span>•</span>
-              <button onClick={() => navigate({ type: 'ai' })} className="hover:text-white transition-colors">Nexus AI</button>
-              <span>•</span>
-              <button onClick={() => navigate({ type: 'knowledge' })} className="hover:text-white transition-colors">Bibliothèque</button>
-              <span>•</span>
-              <button onClick={() => navigate({ type: 'countries' })} className="hover:text-white transition-colors">195 Pays</button>
-            </div>
-
-            <p className="text-xs text-nexus-muted/70 font-light text-center sm:text-right">
-              Conçu pour l'Afrique et le Monde — <span className="text-gradient-gold font-medium">L'Homme Ultime</span>
+      <footer className="mt-24 border-t border-ardoise">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <p className="font-titre text-t3 text-craie">NEXUS</p>
+            <p className="mesure-texte text-petit text-brume">
+              Évaluation des aptitudes cognitives, avec la marge d’erreur.
             </p>
           </div>
+
+          <nav aria-label="Pied de page">
+            <ul className="flex flex-col gap-2">
+              {navItems.slice(1).map((item) => (
+                <li key={item.label}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(item.page as Page)}
+                    className="text-petit text-brume transition-colors hover:text-craie"
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </footer>
     </div>

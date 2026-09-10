@@ -2,13 +2,13 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NEXUS — L'Univers du Savoir | Culture Générale & Encyclopédie</title>
     <meta name="description" content="NEXUS — Plateforme de connaissance immersive et encyclopédie interactive futuriste. Explorez 195 pays, religions, histoire, sciences, mythologie et testez vos connaissances avec nos quiz." />
     <meta name="keywords" content="culture générale, quiz culture générale, encyclopédie, histoire, religions, mythologie, géographie, sciences, 195 pays, savoir, apprentissage interactif, NEXUS" />
     <meta name="author" content="L'Homme Ultime" />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-    <meta name="theme-color" content="#050510" />
+    <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="canonical" href="https://taupe-lily-ac2081.netlify.app/" />
@@ -71,36 +71,7 @@
       }
     </script>
 
-    <!-- Google Analytics 4 (sécurisé) -->
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      // N'initialiser GA4 que si un vrai ID est présent
-      const GA_ID = 'G-XXXXXXXXXX';
-      if (GA_ID && !GA_ID.includes('XXXXXXXXXX')) {
-        const script = document.createElement('script');
-        script.async = true;
-        script.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
-        document.head.appendChild(script);
-        gtag('config', GA_ID, {
-          page_title: document.title,
-          send_page_view: true,
-          cookie_flags: 'SameSite=None;Secure'
-        });
-      }
-      
-      // Helper d'événements personnalisé
-      window.trackEvent = function(eventName, params) {
-        if (typeof gtag === 'function' && GA_ID && !GA_ID.includes('XXXXXXXXXX')) {
-          gtag('event', eventName, params);
-        }
-      };
-    </script>
     <link rel="preconnect" href="https://flagcdn.com" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

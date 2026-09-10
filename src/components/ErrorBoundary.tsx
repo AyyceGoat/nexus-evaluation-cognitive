@@ -31,18 +31,18 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-nexus-bg p-4 text-center">
-          <div className="glass max-w-md p-8 rounded-2xl border border-red-500/20">
+        <div className="min-h-screen flex items-center justify-center bg-noir p-4 text-center">
+          <div className="bg-graphite border border-ardoise max-w-md p-8 rounded-2 border border-alerte/20">
             <div className="text-4xl mb-4">⚠️</div>
-            <h2 className="font-display text-xl font-bold mb-2 text-red-400">
+            <h2 className="font-titre text-xl font-bold mb-2 text-alerte">
               Une erreur inattendue est survenue
             </h2>
-            <p className="text-nexus-muted text-sm mb-6 leading-relaxed">
+            <p className="text-brume text-sm mb-6 leading-relaxed">
               Un dysfonctionnement s'est produit lors du rendu de cette section.
             </p>
             <button
               onClick={this.handleReset}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              className="px-6 py-2.5 rounded-1 bg-mesure text-noir text-sm font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
               Retourner à l'accueil
             </button>
