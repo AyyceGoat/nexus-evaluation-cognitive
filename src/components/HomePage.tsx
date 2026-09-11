@@ -43,7 +43,7 @@ function HomePage() {
             </Link>
             <Link
               to={CHEMINS.inscription}
-              className="rounded-1 text-petit text-brume transition-colors hover:text-craie"
+              className="inline-flex min-h-11 items-center rounded-1 text-petit text-brume transition-colors hover:text-craie"
             >
               Créer un compte pour suivre ma progression
             </Link>

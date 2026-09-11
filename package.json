@@ -1,16 +1,21 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "nexus",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint . && node scripts/verifie-tokens.mjs",
-    "test": "vitest run",
     "build": "tsc --noEmit && vite build",
+    "dev": "vite",
+    "lint": "eslint . && node scripts/verifie-tokens.mjs",
     "preview": "vite preview",
-    "verifie:design": "node scripts/verifie-tokens.mjs"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "verifie": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "verifie:contraste": "node scripts/contrast.mjs",
+    "verifie:design": "node scripts/verifie-tokens.mjs",
+    "verifie:lighthouse": "node scripts/lighthouse.mjs",
+    "verifie:parcours": "node scripts/parcours-complet.mjs",
+    "verifie:rendu": "node scripts/verifie-rendu.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
@@ -40,11 +45,14 @@
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
+    "lighthouse": "^13.4.1",
+    "puppeteer-core": "^25.10.0",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.70.0",
     "vite": "7.3.2",
     "vite-plugin-singlefile": "2.3.0",
     "vitest": "^5.0.0"
-  }
+  },
+  "description": "Évaluation des aptitudes cognitives, restituée avec sa marge d'erreur."
 }

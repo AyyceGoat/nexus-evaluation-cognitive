@@ -1,0 +1,10 @@
+# Normalise les fins de ligne. Ajouté en Phase 7, quand l'arbre était stable :
+# le faire plus tôt aurait produit un diff de 57 fichiers masquant le vrai diff.
+* text=auto eol=lf
+
+# Binaires : jamais de conversion.
+*.png binary
+*.ico binary
+*.woff2 binary
+*.zip binary
+*.glb binary

@@ -53,7 +53,7 @@ export function TableauDeBord() {
           <EmptyState
             titre="Vous n’avez pas encore passé d’évaluation"
             action={
-              <Link to={CHEMINS.evaluation}>
+              <Link to={CHEMINS.evaluation} className="inline-flex">
                 <Button variant="principal">Commencer l’évaluation</Button>
               </Link>
             }
@@ -79,7 +79,7 @@ export function TableauDeBord() {
             <li key={chemin}>
               <Link
                 to={chemin}
-                className="text-petit text-brume transition-colors hover:text-craie"
+                className="flex min-h-11 items-center rounded-1 text-petit text-brume transition-colors hover:text-craie"
               >
                 {libelle}
               </Link>
@@ -125,10 +125,10 @@ function Contenu({ passations }: { passations: PassationResume[] }) {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link to={CHEMINS.rapport(derniere.id)}>
+          <Link to={CHEMINS.rapport(derniere.id)} className="inline-flex">
             <Button variant="principal">Voir le rapport</Button>
           </Link>
-          <Link to={CHEMINS.evaluation}>
+          <Link to={CHEMINS.evaluation} className="inline-flex">
             <Button variant="secondaire">Repasser une évaluation</Button>
           </Link>
         </div>

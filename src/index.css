@@ -126,8 +126,13 @@ p {
 
 /* Focus visible partout, sans exception. Les composants n'ont pas le droit de
    poser `outline: none` sans remplacement. */
-:focus-visible {
+/* `html :focus-visible` et non `:focus-visible` : la réinitialisation de Tailwind pose
+   `outline-color: currentColor` sur `*`, à spécificité égale et plus loin dans la
+   cascade. L'anneau de focus prenait donc la couleur du texte, et changeait de teinte
+   d'un lien à l'autre. Constaté au navigateur, corrigé, revérifié. */
+html :focus-visible {
   outline: 2px solid var(--color-mesure);
+  outline-color: var(--color-mesure);
   outline-offset: 2px;
   border-radius: var(--radius-1);
 }

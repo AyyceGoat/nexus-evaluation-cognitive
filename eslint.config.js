@@ -47,5 +47,13 @@ export default tseslint.config(
     languageOptions: {
       globals: globals.node,
     },
+  },
+  {
+    // Ce script pilote un navigateur : le code passé à `page.evaluate()` s'exécute
+    // dans la page, pas dans Node. Les deux jeux de globals sont donc légitimes.
+    files: ['scripts/verifie-rendu.mjs', 'scripts/parcours-complet.mjs'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
   }
 );

@@ -5,6 +5,14 @@ import './index.css';
 import App from './App';
 import { FournisseurAuth, RouteInvite, RouteProtegee } from './app/auth';
 import { CHEMINS } from './app/navigation';
+// La landing est importée statiquement, contrairement à toutes les autres pages.
+//
+// En 3G simulée, son chargement paresseux remplaçait un squelette de deux lignes par
+// une page entière : le pied de page sautait, et Lighthouse mesurait un CLS de 0,484
+// pour une cible de 0,1. Le décalage était nul sans bridage réseau, ce qui explique
+// qu'il ait échappé à tous les autres contrôles. Elle pèse 4 ko gzip : l'inclure dans
+// le chunk d'entrée coûte moins que le décalage qu'elle provoquait.
+import { PageAccueil } from './pages/ecransPublics';
 
 // Toutes les pages sont en import dynamique, sans exception.
 //
@@ -12,7 +20,6 @@ import { CHEMINS } from './app/navigation';
 // et le rendu SVG des matrices. Chargée statiquement, elle faisait passer le chunk
 // d'entrée de 66 à 176 ko gzip, soit au-delà du budget, pour une page que la plupart
 // des visiteurs n'ouvriront jamais.
-const PageAccueil = lazy(() => import('./pages/ecransPublics').then((m) => ({ default: m.PageAccueil })));
 const PageEvaluation = lazy(() => import('./pages/ecransPublics').then((m) => ({ default: m.PageEvaluation })));
 const PageSavoir = lazy(() => import('./pages/ecransPublics').then((m) => ({ default: m.PageSavoir })));
 const PagePays = lazy(() => import('./pages/ecransPublics').then((m) => ({ default: m.PagePays })));

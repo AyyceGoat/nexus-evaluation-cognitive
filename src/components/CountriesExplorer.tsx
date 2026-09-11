@@ -69,13 +69,13 @@ function CountriesExplorer() {
 
             {/* Description */}
             <div className="mb-8">
-              <h3 className="font-titre text-lg font-semibold mb-3 text-craie">À propos</h3>
+              <h2 className="font-titre text-lg font-semibold mb-3 text-craie">À propos</h2>
               <p className="text-sm sm:text-base text-brume leading-relaxed">{country.description}</p>
             </div>
 
             {/* Facts */}
             <div>
-              <h3 className="font-titre text-lg font-semibold mb-3 text-craie">Faits fascinants</h3>
+              <h2 className="font-titre text-lg font-semibold mb-3 text-craie">Faits fascinants</h2>
               <div className="space-y-2">
                 {country.facts.map((fact, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 rounded-1 bg-ardoise/40">
@@ -96,7 +96,7 @@ function CountriesExplorer() {
       {/* Header */}
       <div className="mb-6 sm:mb-10">
         <h1 className="font-titre text-2xl sm:text-4xl font-bold mb-2">
-          Pays du <span className="text-craie">Monde</span>
+          Les 195 pays du monde
         </h1>
         <p className="text-brume text-sm sm:text-base">195 pays avec drapeaux, cultures et faits fascinants</p>
       </div>
@@ -158,7 +158,7 @@ function CountriesExplorer() {
               loading="lazy"
             />
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-semibold group-hover:text-mesure transition-colors truncate">{c.name}</h3>
+              <h2 className="text-sm font-semibold group-hover:text-mesure transition-colors truncate">{c.name}</h2>
               <p className="text-xs text-brume truncate">{c.capital} • {c.continent}</p>
             </div>
           </button>

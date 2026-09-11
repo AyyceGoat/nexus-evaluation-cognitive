@@ -1,0 +1,29 @@
+# NEXUS
+
+> Évaluation des aptitudes cognitives, restituée avec sa marge d'erreur.
+> 35 questions, environ 25 minutes, sans compte obligatoire.
+
+NEXUS estime cinq aptitudes — matrices logiques, séries numériques, analogies
+verbales, rotation spatiale, mémoire de travail — à partir d'un modèle de réponse
+à l'item à trois paramètres, sur une banque de 120 questions.
+
+Le résultat est toujours accompagné de son intervalle de confiance à 95 %. Si les
+réponses ne se distinguent pas statistiquement d'un tirage au hasard, aucun score
+n'est affiché : un chiffre inventé n'apprendrait rien au répondant.
+
+Ce n'est pas un diagnostic psychologique et cela ne remplace pas un bilan conduit
+par un psychologue.
+
+## Pages
+
+- [Accueil](/): présentation et accès à l'évaluation
+- [Évaluation](/evaluation): passation, gratuite et sans compte
+- [Bibliothèque du savoir](/savoir): 51 sujets de fond
+- [Les 195 pays du monde](/pays): fiches géographiques
+- [Quiz de culture générale](/quiz): 464 questions, 9 domaines
+
+## Méthode
+
+- Modèle 3PL avec paramètre de pseudo-chance, estimation de θ par espérance a posteriori
+- Échelle de restitution de moyenne 100 et d'écart-type 15
+- Centile dont la population de référence est nommée explicitement

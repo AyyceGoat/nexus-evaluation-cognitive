@@ -60,7 +60,7 @@ export function Inscription() {
         titre="Vérifiez votre boîte mail"
         sous={`Un lien de confirmation part vers ${email}. Ouvrez-le pour activer votre compte, puis connectez-vous.`}
       >
-        <Link to={CHEMINS.connexion}>
+        <Link to={CHEMINS.connexion} className="inline-flex">
           <Button variant="secondaire">Aller à la connexion</Button>
         </Link>
       </Cadre>
@@ -173,15 +173,18 @@ export function Connexion() {
       </form>
 
       <div className="mt-6 flex flex-col gap-2 text-petit text-brume">
-        <Link to={CHEMINS.motDePasseOublie} className="text-mesure underline underline-offset-2">
+        <Link
+          to={CHEMINS.motDePasseOublie}
+          className="inline-flex min-h-11 items-center rounded-1 text-mesure underline underline-offset-2"
+        >
           Mot de passe oublié
         </Link>
-        <span>
+        <p>
           Pas encore de compte ?{' '}
           <Link to={CHEMINS.inscription} className="text-mesure underline underline-offset-2">
             En créer un
           </Link>
-        </span>
+        </p>
       </div>
     </Cadre>
   );
@@ -214,7 +217,7 @@ export function MotDePasseOublie() {
         titre="Lien envoyé"
         sous={`Si un compte existe avec ${email}, un lien de réinitialisation vient d’y être envoyé. Il est valable une heure.`}
       >
-        <Link to={CHEMINS.connexion}>
+        <Link to={CHEMINS.connexion} className="inline-flex">
           <Button variant="secondaire">Retour à la connexion</Button>
         </Link>
       </Cadre>

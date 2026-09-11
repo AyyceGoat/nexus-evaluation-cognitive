@@ -152,10 +152,10 @@ function Reussi() {
         attestation de passation.
       </p>
       <div className="flex flex-wrap gap-3">
-        <Link to={CHEMINS.tableauDeBord}>
+        <Link to={CHEMINS.tableauDeBord} className="inline-flex">
           <Button variant="principal">Voir mon rapport</Button>
         </Link>
-        <Link to={CHEMINS.transactions}>
+        <Link to={CHEMINS.transactions} className="inline-flex">
           <Button variant="secondaire">Voir le reçu</Button>
         </Link>
       </div>
@@ -175,7 +175,7 @@ function Echoue({ motif }: { motif?: string }) {
         peut plus être réutilisée.
       </p>
       <div>
-        <Link to={CHEMINS.tableauDeBord}>
+        <Link to={CHEMINS.tableauDeBord} className="inline-flex">
           <Button variant="principal">Réessayer depuis mon rapport</Button>
         </Link>
       </div>
@@ -192,7 +192,7 @@ function Expire() {
         désormais inutilisable. Rien n’a été débité.
       </p>
       <div>
-        <Link to={CHEMINS.tableauDeBord}>
+        <Link to={CHEMINS.tableauDeBord} className="inline-flex">
           <Button variant="principal">Relancer un paiement</Button>
         </Link>
       </div>

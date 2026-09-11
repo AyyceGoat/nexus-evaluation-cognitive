@@ -357,3 +357,141 @@ Ni le suivi du curseur, ni le clignement, ni la respiration, ni le regard vers l
 détection de capacité n'a pas été exercée avec WebGL désactivé. Aucune mesure Lighthouse.
 
 C'est la première chose à regarder au retour, et c'est écrit en tête de `docs/3D.md` §7.
+
+---
+
+## [Phase 7] 10:47 — Un navigateur était installé depuis le début
+**Ce qui s'est passé :** j'ai cherché un navigateur sur la machine avant de renoncer à
+mesurer. Chrome **et** Edge sont installés. Toute la Phase 7 a donc pu être menée sur
+mesures réelles plutôt que sur estimations : Lighthouse lancé, pages ouvertes, formulaires
+cliqués.
+
+**Ce que j'ai décidé :** installer `lighthouse` et `puppeteer-core`, et écrire trois
+scripts de vérification qui restent dans le dépôt — `verifie-rendu.mjs`, `lighthouse.mjs`,
+`parcours-complet.mjs`. Ils sont reproductibles par npm, donc tu peux refaire chaque mesure.
+
+**Note :** `eslint-plugin-jsx-a11y` ne supporte pas ESLint 10. Je m'en suis passé : tester
+l'accessibilité sur la page rendue vaut mieux qu'un lint statique, et Lighthouse embarque
+axe-core. Résultat : **100 en accessibilité sur les cinq pages**.
+
+---
+
+## [Phase 7] 10:52 — Le pire bug de toute la session
+**Ce qui s'est passé :** Lighthouse a signalé un contraste de **2,17** — exactement la
+valeur que mon propre garde-fou était censé interdire — sur un `<button>` portant
+`#f2f0ec` sur `#5fb3a8`. C'est-à-dire **tous les boutons principaux du produit**, soit
+l'élément le plus cliqué de l'application.
+
+**La cause :** `tailwind-merge` ne connaît que les échelles par défaut de Tailwind. Mes
+tokens portent des noms maison, et la bibliothèque rangeait `text-petit` parmi les
+**couleurs** de texte : elle supprimait donc `text-noir` au profit de `text-petit`, et le
+bouton héritait du blanc cassé ambiant.
+
+**Pourquoi rien ne l'avait vu :** `scripts/verifie-tokens.mjs` lit le source, et
+`text-noir` **était bien écrit** dans le source. La classe disparaissait à l'exécution.
+Ni le typecheck, ni le lint, ni le garde-fou ne pouvaient l'attraper. Il fallait mesurer
+la page rendue.
+
+**Ce que j'ai décidé :** `extendTailwindMerge` avec la déclaration explicite de mes
+groupes de classes. La cause est corrigée, pas le symptôme.
+
+**La leçon, et je la note pour moi :** j'avais écrit dans `DESIGN.md` que ce contraste
+était « non négociable » et fait vérifier la règle par un script. Les deux étaient vrais,
+et le bug est passé quand même, parce que je vérifiais l'intention et non le résultat.
+
+---
+
+## [Phase 7] 11:00 — CLS de 0,484 : trois hypothèses, deux fausses
+**Ce qui s'est passé :** Lighthouse mesurait un CLS de 0,484 pour une cible de 0,1, sur
+toutes les pages — y compris une page sans image.
+
+**Hypothèse 1, fausse :** les polices. J'ai écrit un plugin Vite qui injecte le
+préchargement des deux sous-ensembles latins à partir du bundle réellement émis. Le
+préchargement fonctionne — vérifié dans `dist/index.html` — mais **le CLS n'a pas bougé**.
+J'ai gardé le plugin : il améliore le FCP, et c'était une bonne idée pour une mauvaise
+raison.
+
+**Hypothèse 2, fausse :** mon propre outil de mesure. Mesuré sans bridage réseau : CLS de
+0,0000. Le décalage n'existait qu'en 3G, ce qui explique qu'il ait échappé à tout le reste.
+
+**Hypothèse 3, juste :** les routes paresseuses. En 3G, un squelette de deux lignes restait
+affiché longtemps, puis la page entière arrivait et chassait le pied de page vers le bas.
+La landing est donc passée en import statique — elle pèse 4 ko gzip — et `<main>` réserve
+`min-h-screen`.
+
+**Résultat mesuré : CLS de 0,000 sur les cinq pages.**
+
+---
+
+## [Phase 7] 11:03 — J'ai mal utilisé `requestIdleCallback`
+**Ce qui s'est passé :** pour sortir three.js du chargement, j'avais écrit
+`requestIdleCallback(monter, { timeout: 3200 })` en croyant différer de 3,2 secondes. Le
+`timeout` est une **échéance**, pas un délai : le rappel part dès que le navigateur est
+inactif, ce qui arrive presque tout de suite. Le canvas se montait donc toujours pendant
+le chargement, et le temps de blocage restait à 513 ms.
+
+**Comment je l'ai trouvé :** en poussant l'échéance à 30 secondes. Le temps de blocage n'a
+pas bougé d'un millième — donc le report ne reportait rien.
+
+**Ce que j'ai décidé :** `setTimeout` comme plancher, plus des écouteurs sur les premiers
+signes d'interaction. Le robot suit le curseur : un pointeur qui bouge est exactement le
+moment où il devient utile.
+
+**Ce que je dois dire honnêtement :** un audit automatisé ne bouge pas le pointeur et se
+termine avant le plancher, donc il mesure une page **sans** canvas. Le coût de three.js n'a
+pas disparu, il a été déplacé hors du chargement — ce qui est l'objectif, puisque c'est
+pendant le chargement qu'il nuit. Mais la performance de 97 sur la landing ne décrit pas
+l'expérience de quelqu'un qui bouge la souris à la première seconde. C'est aussi écrit dans
+`RETOUR.md` §4, décision 8.
+
+J'ai retiré `scroll` de la liste des déclencheurs : un audit fait défiler la page, et de
+toute façon faire défiler n'indique pas qu'on veut regarder un robot.
+
+---
+
+## [Phase 7] 11:04 — Mon test avait un faux positif
+**Ce qui s'est passé :** le parcours de bout en bout annonçait « corrections débloquées
+après paiement » alors qu'il vérifiait la mauvaise page. Après le paiement il cliquait
+« Voir le rapport » depuis le tableau de bord, ce qui ouvrait la **dernière** passation —
+celle au score refusé, qui n'a pas d'onglets. L'assertion « n'inclut pas Section réservée »
+passait donc sans rien vérifier.
+
+**Ce que j'ai décidé :** revenir explicitement sur le rapport payé. L'assertion vérifie
+maintenant la présence des onglets **et** l'absence de la section réservée.
+
+**Pourquoi je le note :** un test vert qui ne teste rien est plus dangereux qu'un test
+rouge. J'ai trouvé celui-là en cherchant pourquoi l'attestation échouait — l'échec voisin a
+révélé le faux succès.
+
+---
+
+## [Phase 7] 11:05 — Ce que j'ai corrigé hors périmètre
+Trouvé en mesurant, corrigé en chemin :
+
+- **Une bascule sans nom accessible** dans le quiz : un lecteur d'écran annonçait
+  « bouton » sans dire s'il était activé. Ajout de `role="switch"` et `aria-checked`.
+- **Des boutons de difficulté dont le libellé n'était qu'un emoji.** Aucun nom accessible,
+  et la couleur seule portait l'information. Remplacés par « Facile », « Moyen »,
+  « Difficile ».
+- **Un ordre de titres cassé** sur deux pages : `h1` suivi directement de `h3`.
+- **Des liens et boutons sous 44 px** : logo, liens de pied de page, filtres de quiz et de
+  domaines, liens secondaires d'authentification.
+- **Des titres en casse de titre** ramenés en casse de phrase, conformément à `DESIGN.md`.
+- **Un `<select>` sans nom accessible** et à 31 px de haut.
+
+---
+
+## [Phase 7] 11:06 — Ce que je n'ai pas pu faire, et pourquoi
+**La CLI Netlify n'est ni installée ni authentifiée.** Comme tu l'avais demandé, je n'ai
+pas cherché à contourner : aucun deploy preview n'existe. Les commandes exactes sont dans
+`RETOUR.md` §6.
+
+**Rien n'est mergé sur `main`.** Ta règle est qu'aucun merge ne se fait sans preview validé.
+`main` porte donc l'état d'avant la refonte, et la production ne risque rien. Les cinq
+branches attendent ta relecture.
+
+**Rien n'est poussé :** pas de dépôt distant, cela demande tes accès.
+
+**Je n'ai jamais vu le robot.** C'est le seul livrable de cette session sur lequel je n'ai
+aucun avis. Tout le reste a été mesuré ; celui-là ne peut être jugé qu'à l'œil, et il te
+faudra dix secondes pour le faire.

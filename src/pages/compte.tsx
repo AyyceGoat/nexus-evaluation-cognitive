@@ -172,7 +172,7 @@ export function Transactions() {
           <EmptyState
             titre="Aucune transaction"
             action={
-              <Link to={CHEMINS.tableauDeBord}>
+              <Link to={CHEMINS.tableauDeBord} className="inline-flex">
                 <Button variant="secondaire">Retour au tableau de bord</Button>
               </Link>
             }
@@ -237,7 +237,7 @@ export function NonTrouve() {
         sous="Le lien est peut-être incomplet, ou la page a été déplacée."
       />
       <div className="mt-8">
-        <Link to={CHEMINS.accueil}>
+        <Link to={CHEMINS.accueil} className="inline-flex">
           <Button variant="principal">Retour à l’accueil</Button>
         </Link>
       </div>

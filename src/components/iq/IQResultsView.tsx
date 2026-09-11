@@ -319,10 +319,10 @@ function LockedNotice({ label, passationId }: { label: string; passationId: stri
             n’importe quel appareil.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link to={CHEMINS.inscription}>
+            <Link to={CHEMINS.inscription} className="inline-flex">
               <Button variant="principal">Créer mon compte</Button>
             </Link>
-            <Link to={CHEMINS.connexion}>
+            <Link to={CHEMINS.connexion} className="inline-flex">
               <Button variant="secondaire">Me connecter</Button>
             </Link>
           </div>

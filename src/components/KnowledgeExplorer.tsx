@@ -218,7 +218,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
               50+ Sujets Fondamentaux & Personnalités Légendaires
             </div>
             <h1 className="font-titre text-3xl sm:text-5xl font-black mb-3">
-              Bibliothèque du <span className="text-craie">Savoir Universel</span>
+              Bibliothèque du savoir
             </h1>
             <p className="text-brume text-sm sm:text-base max-w-2xl font-light">
               Explorez les grands tournants de l'histoire, les mécanismes financiers, les avancées scientifiques, les lois de la psychologie et la pensée des géants.
@@ -249,7 +249,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
           <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-8 scroll-smooth-x">
             <button
               onClick={() => setSelectedDomain('all')}
-              className={`px-4 py-2 rounded-1 text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`min-h-11 px-4 rounded-1 text-micro font-semibold whitespace-nowrap transition-colors ${
                 selectedDomain === 'all'
                   ? 'bg-mesure text-noir ring-1 ring-mesure'
                   : 'bg-graphite border border-ardoise text-brume hover:text-craie'
@@ -264,7 +264,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
                 <button
                   key={domain.id}
                   onClick={() => setSelectedDomain(domain.id)}
-                  className={`px-4 py-2 rounded-1 text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                  className={`min-h-11 px-4 rounded-1 text-micro font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-mesure text-noir ring-1 ring-mesure'
                       : 'bg-graphite border border-ardoise text-brume hover:text-craie'

@@ -74,7 +74,10 @@ export default function App() {
       <header className="sticky top-0 z-40 border-b border-ardoise bg-noir/95">
         <nav aria-label="Navigation principale" className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex h-14 items-center justify-between gap-2">
-            <Link to={CHEMINS.accueil} className="font-titre text-t3 tracking-tight text-craie">
+            <Link
+              to={CHEMINS.accueil}
+              className="flex min-h-11 items-center rounded-1 font-titre text-t3 tracking-tight text-craie"
+            >
               NEXUS
             </Link>
 
@@ -153,7 +156,10 @@ export default function App() {
         </nav>
       </header>
 
-      <main id="contenu">
+      {/* `min-h-screen` réserve la place : sans elle, le pied de page est peint
+          haut pendant le chargement d'une route paresseuse puis chassé vers le bas,
+          ce qui compte comme un décalage de mise en page. */}
+      <main id="contenu" className="min-h-screen">
         <ErrorBoundary>
           <Suspense fallback={<AttentePage />}>
             <Outlet />
@@ -176,7 +182,7 @@ export default function App() {
                 <li key={lien.to}>
                   <Link
                     to={lien.to}
-                    className="text-petit text-brume transition-colors hover:text-craie"
+                    className="flex min-h-11 items-center rounded-1 text-petit text-brume transition-colors hover:text-craie"
                   >
                     {lien.libelle}
                   </Link>

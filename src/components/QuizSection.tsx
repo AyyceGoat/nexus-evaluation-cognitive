@@ -14,7 +14,7 @@ function QuizSection() {
         <div className="text-center mb-8 sm:mb-10">
           <span className="text-4xl sm:text-5xl mb-4 block">🧠</span>
           <h1 className="font-titre text-2xl sm:text-4xl font-bold mb-2">
-            Quiz du <span className="text-craie">Savoir</span>
+            Quiz de culture générale
           </h1>
           <p className="text-brume text-sm sm:text-base max-w-lg mx-auto">
             100+ questions • 9 domaines • 6 modes de jeu
@@ -31,9 +31,9 @@ function QuizSection() {
 
         {/* Mode Selection */}
         <div className="mb-6 sm:mb-8">
-          <h3 className="font-titre text-sm sm:text-base font-semibold mb-3 flex items-center gap-2">
-            <span>🎮</span> Mode de jeu
-          </h3>
+          <h2 className="font-titre text-sm sm:text-base font-semibold mb-3 flex items-center gap-2">
+            Mode de jeu
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {quizModes.map((mode) => (
               <button
@@ -56,13 +56,13 @@ function QuizSection() {
         {/* Category Selection */}
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-titre text-sm sm:text-base font-semibold flex items-center gap-2">
-              <span>📚</span> Domaines
-            </h3>
+            <h2 className="font-titre text-sm sm:text-base font-semibold flex items-center gap-2">
+              Domaines
+            </h2>
             <div className="flex gap-2">
               <button
                 onClick={game.selectAllCategories}
-                className="text-xs px-3 py-1.5 rounded-1 bg-mesure/10 text-mesure hover:bg-mesure/20 transition-colors active:scale-95"
+                className="min-h-11 px-3 rounded-1 bg-mesure/10 text-micro text-mesure hover:bg-mesure/20 transition-colors"
               >
                 Tous
               </button>
@@ -101,18 +101,18 @@ function QuizSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 sm:mb-8">
           {/* Difficulty */}
           <div className="bg-graphite border border-ardoise rounded-1 p-4">
-            <p className="text-xs text-brume mb-2">⚙️ Difficulté</p>
+            <p className="text-xs text-brume mb-2">Difficulté</p>
             <div className="flex flex-wrap gap-1.5">
               {[
                 { id: 'all', label: 'Toutes' },
-                { id: 'easy', label: '🟢' },
-                { id: 'medium', label: '🟡' },
-                { id: 'hard', label: '🔴' },
+                { id: 'easy', label: 'Facile' },
+                { id: 'medium', label: 'Moyen' },
+                { id: 'hard', label: 'Difficile' },
               ].map((d) => (
                 <button
                   key={d.id}
                   onClick={() => game.setSelectedDifficulty(d.id as Difficulty)}
-                  className={`px-2.5 py-1.5 rounded-1 text-xs font-medium transition-colors active:scale-95 ${
+                  className={`min-h-11 px-3 rounded-1 text-micro font-medium transition-colors ${
                     game.selectedDifficulty === d.id
                       ? 'bg-mesure text-noir'
                       : 'bg-ardoise/50 text-brume hover:bg-ardoise/50'
@@ -126,13 +126,13 @@ function QuizSection() {
 
           {/* Question Count */}
           <div className="bg-graphite border border-ardoise rounded-1 p-4">
-            <p className="text-xs text-brume mb-2">📝 Questions</p>
+            <p className="text-xs text-brume mb-2">Nombre de questions</p>
             <div className="flex flex-wrap gap-1.5">
               {[5, 10, 15, 20, 30].map((n) => (
                 <button
                   key={n}
                   onClick={() => game.setQuestionCount(n)}
-                  className={`px-2.5 py-1.5 rounded-1 text-xs font-medium transition-colors active:scale-95 ${
+                  className={`min-h-11 px-3 rounded-1 text-micro font-medium transition-colors ${
                     game.questionCount === n
                       ? 'bg-mesure text-noir'
                       : 'bg-ardoise/50 text-brume hover:bg-ardoise/50'
@@ -147,13 +147,13 @@ function QuizSection() {
           {/* Time (for timed modes) */}
           {['timed', 'rapid'].includes(game.selectedMode) && (
             <div className="bg-graphite border border-ardoise rounded-1 p-4">
-              <p className="text-xs text-brume mb-2">⏱️ Temps/question</p>
+              <p className="text-xs text-brume mb-2">Temps par question</p>
               <div className="flex flex-wrap gap-1.5">
                 {[15, 20, 30, 45].map((t) => (
                   <button
                     key={t}
                     onClick={() => game.setTimePerQuestion(t)}
-                    className={`px-2.5 py-1.5 rounded-1 text-xs font-medium transition-colors active:scale-95 ${
+                    className={`min-h-11 px-3 rounded-1 text-micro font-medium transition-colors ${
                       game.timePerQuestion === t
                         ? 'bg-mesure text-noir'
                         : 'bg-ardoise/50 text-brume hover:bg-ardoise/50'
@@ -166,25 +166,39 @@ function QuizSection() {
             </div>
           )}
 
-          {/* Au */}
+          {/* Passage automatique à la question suivante */}
           <div className="bg-graphite border border-ardoise rounded-1 p-4">
-            <p className="text-xs text-brume mb-2">⚡ Passage auto</p>
+            <p className="text-xs text-brume mb-2">Passage auto</p>
             <div className="flex items-center gap-3">
+              {/* `role="switch"` et `aria-checked` : sans eux, un lecteur d'écran
+                  annonce « bouton » sans dire s'il est activé. La zone tactile fait
+                  44 px de haut même si le rail n'en fait que 24. */}
               <button
+                type="button"
+                role="switch"
+                aria-checked={game.autoAdvance}
+                aria-label="Passer automatiquement à la question suivante"
                 onClick={() => game.setAutoAdvance(!game.autoAdvance)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${
-                  game.autoAdvance ? 'bg-mesure' : 'bg-ardoise/50'
-                }`}
+                className="flex min-h-11 items-center rounded-1 px-1"
               >
-                <div className={`absolute top-1 w-4 h-4 rounded-full bg-craie transition-transform ${
-                  game.autoAdvance ? 'left-6' : 'left-1'
-                }`} />
+                <span
+                  className={`relative block h-6 w-11 rounded-full transition-colors ${
+                    game.autoAdvance ? 'bg-mesure' : 'bg-ardoise'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 block h-4 w-4 rounded-full bg-craie transition-transform ${
+                      game.autoAdvance ? 'left-6' : 'left-1'
+                    }`}
+                  />
+                </span>
               </button>
               {game.autoAdvance && (
                 <select
                   value={game.autoAdvanceDelay}
                   onChange={(e) => game.setAutoAdvanceDelay(Number(e.target.value))}
-                  className="bg-graphite text-craie border border-ardoise/30 rounded-1 px-2 py-1 text-xs focus:border-mesure cursor-pointer"
+                  aria-label="Délai avant la question suivante"
+                  className="min-h-11 bg-graphite text-craie border border-ardoise rounded-1 px-2 text-micro cursor-pointer"
                 >
                   <option value={1} className="bg-graphite text-craie">1s</option>
                   <option value={1.5} className="bg-graphite text-craie">1.5s</option>
