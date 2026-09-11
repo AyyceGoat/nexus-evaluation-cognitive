@@ -49,7 +49,8 @@ paiement, landing et robot, finition et vérification.
   demandé, je n'ai pas cherché à contourner.
 - **Rien n'est mergé sur `main`.** Ta règle est qu'aucun merge ne se fait sans preview
   validé. `main` porte donc toujours l'état d'avant la refonte : **la production ne
-  risque rien.** Les cinq branches de phase attendent ta relecture.
+  risque rien.** Les six branches de phase attendent ta relecture, la dernière étant
+  `refonte/08-corrections-visuelles`.
 - **Rien n'est poussé.** Il n'y a pas de dépôt distant : cela demande tes accès GitHub.
 
 ---
@@ -66,10 +67,10 @@ git log --oneline
 git branch
 ```
 
-**Attendu :** sept commits, et six branches dont `main`. `main` est intact.
+**Attendu :** neuf commits, et six branches dont `main`. `main` est intact.
 
 ```bash
-git checkout refonte/07-finition
+git checkout refonte/08-corrections-visuelles
 ```
 
 ### Étape 2 — Les quatre gates (3 min)
@@ -266,6 +267,7 @@ git merge --no-ff refonte/04-auth
 git merge --no-ff refonte/05-paiement
 git merge --no-ff refonte/06-landing-robot
 git merge --no-ff refonte/07-finition
+git merge --no-ff refonte/08-corrections-visuelles
 
 # 2. Vérifier une dernière fois sur main.
 npm run verifie
