@@ -135,63 +135,96 @@ export function BusteProcedural({ cible, anime }: Props) {
   });
 
   return (
-    <group ref={buste} position={[0, -0.35, 0]}>
-      {/* ── Épaules ───────────────────────────────────────────────────────── */}
-      <RoundedBox args={[1.9, 0.5, 0.8]} radius={0.16} smoothness={4} position={[0, -0.62, 0]}>
-        <meshStandardMaterial color={couleurs.graphite} roughness={0.55} metalness={0.7} />
-      </RoundedBox>
+    <group ref={buste} position={[0, -0.12, 0]}>
+      {/*
+        Proportions de buste, obtenues après trois essais tous corrigés sur capture :
 
-      {/* Buste */}
-      <RoundedBox args={[1.15, 0.85, 0.68]} radius={0.14} smoothness={4} position={[0, -0.16, 0]}>
-        <meshStandardMaterial color={couleurs.graphite} roughness={0.5} metalness={0.75} />
-      </RoundedBox>
+        1. Trois boîtes empilées → lisait comme une pile de galets, avec un
+           décrochement visible à chaque étage.
+        2. Un tronc de cône → lisait comme une lampe de bureau, le fuselage était
+           trop marqué et le liseré de base attirait l'œil vers le bas.
+        3. Celle-ci : une masse pectorale en ellipsoïde, un cou court, une tête qui
+           occupe environ 40 % de la hauteur totale — le rapport d'un buste sculpté.
 
-      {/* Plastron : une plaque un cran plus claire, pour lire le volume */}
-      <RoundedBox args={[0.62, 0.42, 0.06]} radius={0.03} smoothness={3} position={[0, -0.1, 0.35]}>
-        <meshStandardMaterial color={couleurs.ardoise} roughness={0.4} metalness={0.85} />
-      </RoundedBox>
+        Un ellipsoïde n'a aucune arête, donc aucun décrochement, et sa largeur suggère
+        les épaules sans qu'il faille les poser en pièce séparée.
+      */}
 
-      {/* ── Cou ───────────────────────────────────────────────────────────── */}
-      <mesh position={[0, 0.32, 0]}>
-        <cylinderGeometry args={[0.17, 0.21, 0.34, 24]} />
-        <meshStandardMaterial color={couleurs.ardoise} roughness={0.35} metalness={0.9} />
+      {/* ── Masse pectorale et épaules : un seul ellipsoïde ────────────────── */}
+      {/* Largeur nettement supérieure à la hauteur : c'est ce rapport, et lui seul,
+          qui fait lire « épaules » plutôt que « boule ». À échelle presque isométrique,
+          l'ellipsoïde devenait une sphère — essayé, corrigé. */}
+      <mesh position={[0, -0.3, 0]} scale={[1.02, 0.48, 0.44]}>
+        <sphereGeometry args={[0.68, 48, 32]} />
+        <meshStandardMaterial color={couleurs.ardoise} roughness={0.6} metalness={0.2} />
       </mesh>
 
-      {/* ── Tête ──────────────────────────────────────────────────────────── */}
-      <group ref={tete} position={[0, 0.56, 0]}>
-        <RoundedBox args={[0.78, 0.72, 0.7]} radius={0.17} smoothness={5}>
-          <meshStandardMaterial color={couleurs.graphite} roughness={0.42} metalness={0.8} />
+      {/* Coupe basse : sombre et mate, elle tranche l'ellipsoïde net plutôt que de
+          le laisser s'arrondir en ballon. Un liseré clair, essayé, tirait tout le
+          regard vers le bas du cadre. */}
+      <mesh position={[0, -0.58, 0]} scale={[1, 1, 0.44]}>
+        <cylinderGeometry args={[0.56, 0.46, 0.09, 48]} />
+        <meshStandardMaterial color={couleurs.graphite} roughness={0.7} metalness={0.1} />
+      </mesh>
+
+      {/* Plastron : un méplat étroit et sombre au centre du torse, pour lui donner
+          un axe sans ajouter de volume. */}
+      <mesh position={[0, -0.26, 0.27]} scale={[1, 1, 0.28]}>
+        <cylinderGeometry args={[0.07, 0.095, 0.3, 28]} />
+        <meshStandardMaterial color={couleurs.graphite} roughness={0.68} metalness={0.12} />
+      </mesh>
+
+      {/* ── Cou : court, c'est ce qui évite l'effet « tête sur un pied » ───── */}
+      <mesh position={[0, 0.02, 0]}>
+        <cylinderGeometry args={[0.14, 0.19, 0.24, 32]} />
+        <meshStandardMaterial color={couleurs.graphite} roughness={0.48} metalness={0.32} />
+      </mesh>
+      {/* Anneau d'articulation : la seule pièce claire du buste */}
+      <mesh position={[0, 0.13, 0]}>
+        <cylinderGeometry args={[0.155, 0.155, 0.045, 32]} />
+        <meshStandardMaterial color={couleurs.brume} roughness={0.24} metalness={0.58} />
+      </mesh>
+
+      {/* ── Tête : environ 40 % de la hauteur du buste ────────────────────── */}
+      <group ref={tete} position={[0, 0.42, 0]}>
+        <RoundedBox args={[0.54, 0.62, 0.56]} radius={0.17} smoothness={6}>
+          <meshStandardMaterial color={couleurs.ardoise} roughness={0.34} metalness={0.32} />
         </RoundedBox>
 
-        {/* Visière : noir mat encastré, c'est elle qui donne le regard */}
-        <RoundedBox args={[0.66, 0.24, 0.08]} radius={0.04} smoothness={3} position={[0, 0.04, 0.33]}>
-          <meshStandardMaterial color={couleurs.noir} roughness={0.9} metalness={0.1} />
+        {/* Visière : bandeau étroit et mat, encastré dans la face */}
+        <RoundedBox
+          args={[0.45, 0.14, 0.06]}
+          radius={0.028}
+          smoothness={4}
+          position={[0, 0.045, 0.27]}
+        >
+          <meshStandardMaterial color={couleurs.noir} roughness={0.94} metalness={0.04} />
         </RoundedBox>
 
-        {/* Regard : deux fentes émissives. Pas des yeux — un robot, pas un personnage. */}
-        <mesh ref={oeilGauche} position={[-0.15, 0.04, 0.38]}>
-          <boxGeometry args={[0.18, 0.035, 0.02]} />
+        {/* Regard : deux fentes. Pas des yeux — un robot, pas un personnage. */}
+        <mesh ref={oeilGauche} position={[-0.1, 0.045, 0.305]}>
+          <boxGeometry args={[0.12, 0.026, 0.02]} />
           <meshStandardMaterial
             color={couleurs.mesure}
             emissive={couleurs.mesure}
-            emissiveIntensity={2.2}
+            emissiveIntensity={1.8}
             toneMapped={false}
           />
         </mesh>
-        <mesh ref={oeilDroit} position={[0.15, 0.04, 0.38]}>
-          <boxGeometry args={[0.18, 0.035, 0.02]} />
+        <mesh ref={oeilDroit} position={[0.1, 0.045, 0.305]}>
+          <boxGeometry args={[0.12, 0.026, 0.02]} />
           <meshStandardMaterial
             color={couleurs.mesure}
             emissive={couleurs.mesure}
-            emissiveIntensity={2.2}
+            emissiveIntensity={1.8}
             toneMapped={false}
           />
         </mesh>
 
         {/* L'arête lumineuse : une seule, sur le sommet du crâne. C'est là que se
             concentre toute l'audace de la page. */}
-        <mesh position={[0, 0.37, 0]}>
-          <boxGeometry args={[0.05, 0.016, 0.62]} />
+        <mesh position={[0, 0.315, 0]}>
+          <boxGeometry args={[0.03, 0.012, 0.48]} />
           <meshStandardMaterial
             color={couleurs.mesure}
             emissive={couleurs.mesure}
@@ -200,11 +233,11 @@ export function BusteProcedural({ cible, anime }: Props) {
           />
         </mesh>
 
-        {/* Plaques latérales : de l'articulation, pas de la décoration */}
+        {/* Pivots latéraux : de l'articulation, pas de la décoration */}
         {[-1, 1].map((cote) => (
-          <mesh key={cote} position={[cote * 0.41, 0.02, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.13, 0.13, 0.06, 20]} />
-            <meshStandardMaterial color={couleurs.ardoise} roughness={0.3} metalness={0.95} />
+          <mesh key={cote} position={[cote * 0.285, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.09, 0.09, 0.05, 24]} />
+            <meshStandardMaterial color={couleurs.brume} roughness={0.26} metalness={0.54} />
           </mesh>
         ))}
       </group>

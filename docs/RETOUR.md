@@ -35,8 +35,10 @@ paiement, landing et robot, finition et vérification.
   client typé et deux Edge Functions sont écrits en entier, **jamais exécutés**.
   L'application tourne grâce à un adaptateur local, annoncé par un bandeau permanent.
 - **CinetPay n'a jamais été appelé.** Aucun compte marchand, aucune clé.
-- **Le robot n'a pas été jugé à l'œil.** Il se monte, occupe 380 × 440 px, ne provoque
-  aucune erreur. Je n'ai pas d'avis sur son apparence : je ne l'ai pas regardé.
+- **Le robot a été regardé et repris cinq fois.** Chrome était installé : j'ai rendu la
+  page, constaté qu'il était quasi invisible puis mal cadré puis trop trapu, et corrigé à
+  chaque fois. La version livrée lit comme un buste. **Mais son mouvement n'a pas été
+  observé** : une capture est fixe.
 - **Aucun modèle GLB n'est livré.** Trois candidats sont sourcés avec des chiffres
   vérifiés par API dans `docs/3D.md`. Le repli procédural est le livrable de la v1, comme
   tu l'avais accepté.
@@ -123,7 +125,8 @@ npm run verifie:rendu http://localhost:4300
 Ouvre `http://localhost:4300`.
 
 1. **La landing.** Bouge la souris : le robot doit apparaître après un fondu et suivre le
-   curseur avec du retard. **C'est le point à juger : je ne l'ai jamais vu.**
+   curseur avec du retard. **C'est le point à juger** — j'ai vu son apparence sur capture
+   et l'ai corrigée cinq fois, mais jamais son mouvement.
 2. **Survole le bouton « Commencer l'évaluation ».** Le regard du robot doit s'y porter.
 3. **Réduis la fenêtre à 360 px de large.** Rien ne doit déborder.
 4. **Active « réduire les animations »** dans les réglages système. Recharge : le robot
@@ -149,7 +152,7 @@ Par ordre de priorité, avec le temps que ça prend.
 | 1 | **Relire et merger les branches** après avoir suivi le §2 | 30 min | Ta règle : aucun merge sans preview validé |
 | 2 | **Créer le dépôt distant et pousser** | 10 min | Demande tes accès GitHub |
 | 3 | **Lier Netlify au dépôt** (Site settings → Build & deploy → Link repository) | 10 min | Demande ton dashboard Netlify |
-| 4 | **Regarder le robot** et décider : garder le procédural, ou prendre un des trois modèles de `docs/3D.md` | 15 min | Je ne l'ai jamais vu |
+| 4 | **Regarder le robot bouger** et décider : garder le procédural, ou prendre un des trois modèles de `docs/3D.md` | 15 min | Une capture ne montre pas le mouvement |
 | 5 | **Créer le projet Supabase**, appliquer la migration, renseigner les deux variables | 45 min | Demande un compte |
 | 6 | **Écrire les deux Edge Functions de lecture** (`cloturer-passation`, `lire-rapport`) | 2 h | Elles supposent le projet créé pour être testées |
 | 7 | **Ouvrir le compte marchand CinetPay** et relever les trois clés | 1 h + validation | Demande ton identité et tes documents |
@@ -206,13 +209,15 @@ Toutes sont réversibles, sauf mention contraire.
 
 Sans euphémisme.
 
-1. **Je n'ai jamais regardé le robot.** Il se monte, mesure 380 × 440 px, ne lève aucune
-   erreur. Mais la géométrie, les matériaux, l'éclairage et les proportions sont écrits en
-   aveugle. Le ressort est vérifié par neuf tests numériques ; **l'apparence, par rien.**
-   Il peut être laid. C'est la première chose à regarder.
-2. **Le suivi du curseur, le clignement, la respiration, le regard vers le CTA n'ont pas
-   été observés.** Le code existe, est typé, et le canvas se monte. Le comportement n'a
-   jamais été vu.
+1. **Le mouvement du robot n'a pas été observé.** Son apparence, oui : cinq rendus, cinq
+   corrections, captures dans `verification/`. Mais une capture est fixe — le suivi du
+   curseur, le clignement, la respiration et le regard vers le CTA ne s'y voient pas. Le
+   ressort est vérifié par neuf tests numériques ; le rendu du mouvement, par rien.
+   **C'est la première chose à regarder**, et cela prend dix secondes : ouvre la landing
+   et bouge la souris.
+2. **Je n'ai pas d'avis sur le goût.** Le buste ne ressemble plus à un jouet, ce qui était
+   la contrainte. S'il te déplaît quand même, `docs/3D.md` §1 donne trois modèles de
+   remplacement avec des chiffres vérifiés.
 3. **`deviceorientation` et le flux d'autorisation iOS n'ont pas été testés.** Aucun
    appareil mobile réel.
 4. **La détection de capacité n'a pas été exercée sur un appareil d'entrée de gamme.**

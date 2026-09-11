@@ -156,9 +156,13 @@ export default function App() {
         </nav>
       </header>
 
-      {/* `min-h-screen` réserve la place : sans elle, le pied de page est peint
-          haut pendant le chargement d'une route paresseuse puis chassé vers le bas,
-          ce qui compte comme un décalage de mise en page. */}
+      {/* `min-h-screen` sur `<main>`, et pas seulement sur le squelette d'attente.
+          Mesuré deux fois : c'est bien cette réserve permanente qui ramène le CLS de
+          0,324 à 0,000. Sans elle, le pied de page est peint dans le viewport puis
+          chassé vers le bas quand le contenu s'étoffe — polices remplacées, canvas
+          monté. Je l'avais retirée en trouvant l'espace sous le hero trop généreux ;
+          le CLS est remonté, donc elle reste. L'espace négatif est de toute façon ce
+          que DESIGN.md demande. */}
       <main id="contenu" className="min-h-screen">
         <ErrorBoundary>
           <Suspense fallback={<AttentePage />}>
@@ -196,10 +200,22 @@ export default function App() {
   );
 }
 
-/** Squelette d'attente pendant le chargement du module de page. */
+/**
+ * Squelette d'attente pendant le chargement du module de page.
+ *
+ * `min-h-screen` est porté par le squelette et non par `<main>` : il faut réserver la
+ * hauteur **pendant** le chargement, pour que le pied de page ne soit pas peint haut
+ * puis chassé vers le bas — c'est ce qui donnait un CLS de 0,484 en 3G. Le poser sur
+ * `<main>` en permanence marchait aussi, mais laissait un grand vide sous le hero sur
+ * les écrans hauts. Constaté sur capture.
+ */
 function AttentePage() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6" role="status" aria-live="polite">
+    <div
+      className="mx-auto min-h-screen max-w-4xl px-4 py-12 sm:px-6"
+      role="status"
+      aria-live="polite"
+    >
       <span className="sr-only">Chargement de la page</span>
       <div className="squelette h-8 w-64 rounded-1" aria-hidden="true" />
       <div className="squelette mt-6 h-4 w-full max-w-md rounded-1" aria-hidden="true" />

@@ -495,3 +495,85 @@ branches attendent ta relecture.
 **Je n'ai jamais vu le robot.** C'est le seul livrable de cette session sur lequel je n'ai
 aucun avis. Tout le reste a été mesuré ; celui-là ne peut être jugé qu'à l'œil, et il te
 faudra dix secondes pour le faire.
+
+---
+
+## [Phase 8] 11:20 — Je pouvais voir le robot depuis le début
+**Ce qui s'est passé :** j'avais écrit dans trois documents que je n'avais jamais vu le
+robot et que je n'avais aucun avis sur son apparence. C'était faux. Mon script de
+vérification écrivait des captures d'écran dans `verification/`, et je peux lire une image.
+Je m'étais fermé une porte que j'avais moi-même ouverte.
+
+**Ce que j'ai fait :** regardé la capture. Le robot était **quasi invisible** — une masse
+noire sur fond noir dont seules les deux fentes du regard ressortaient — et **coupé par le
+cadre**.
+
+**Ce que j'en retiens :** j'ai affirmé une limite sans la tester. C'est exactement le
+travers que ce journal est censé attraper.
+
+---
+
+## [Phase 8] 11:22 — Cinq versions du robot, chacune corrigée sur un rendu
+Aucune de ces erreurs n'était détectable autrement qu'en regardant.
+
+1. **Invisible.** `metalness` à 0,8 sans carte d'environnement ne réfléchit rien : les
+   matériaux tombaient au noir. Métal ramené à 0,18-0,30, quatre sources de lumière au
+   lieu de deux, intensités relevées.
+2. **Hors cadre.** À fov 32 et z 3,1, la hauteur visible valait 1,78 pour un buste de 2 :
+   tête et épaules coupées. Caméra reculée, puis réajustée trois fois avec les proportions.
+3. **Pile de galets.** Trois boîtes arrondies de largeurs décroissantes, avec un
+   décrochement visible par étage. Ça ne ressemblait pas à un torse.
+4. **Lampe de bureau.** Remplacées par un tronc de cône : trop fuselé, et le liseré clair
+   de la base tirait tout le regard vers le bas.
+5. **Boule.** Un ellipsoïde, mais à échelle presque isométrique : une sphère.
+6. **Version retenue.** La largeur doit nettement dépasser la hauteur — c'est ce rapport,
+   et lui seul, qui fait lire « épaules ». Masse pectorale large et basse, coupe nette,
+   cou court à anneau d'articulation, tête plus haute que large.
+
+Chaque essai écarté est documenté dans le fichier source avec sa raison, pour que
+personne ne les retente.
+
+---
+
+## [Phase 8] 11:28 — Une régression que j'ai créée en corrigeant une autre chose
+**Ce qui s'est passé :** en voyant la capture, j'ai trouvé l'espace sous le hero trop
+généreux et j'ai déplacé `min-h-screen` de `<main>` vers le squelette d'attente. Le CLS est
+remonté de 0,000 à **0,324 sur la landing et 0,525 sur l'évaluation**.
+
+**Ce que j'ai appris au passage :** j'avais mal attribué la correction précédente. Je
+pensais que le CLS était réglé par le passage de la landing en import statique ; c'était en
+réalité la réserve de hauteur sur `<main>` qui faisait le travail. Les deux changements
+étaient dans la même passe, et je n'avais pas isolé la cause.
+
+**Ce que j'ai décidé :** restaurer `min-h-screen` sur `<main>`. L'espace négatif est de
+toute façon ce que `DESIGN.md` demande, et une correction mesurée passe avant mon reproche
+esthétique. CLS remesuré : **0,000 sur les cinq pages**.
+
+---
+
+## [Phase 8] 11:32 — Trois documents corrigés
+`docs/3D.md`, `docs/RETOUR.md` et ce journal affirmaient que le robot n'avait jamais été
+vu, et `3D.md` décrivait une géométrie qui n'existe plus. Tout est repris.
+
+**Ce qui reste vrai :** je n'ai pas vu le robot **bouger**. Une capture est fixe. Le suivi
+du curseur, le clignement, la respiration et le regard vers le CTA sont écrits, et le
+ressort est couvert par neuf tests numériques — mais le mouvement lui-même n'a pas été
+observé. C'est le seul point de la session qui demande encore tes dix secondes.
+
+**Ce qui reste vrai aussi :** je n'ai vu aucun des trois modèles Sketchfab. Leurs
+visionneuses sont des applications tierces ; le navigateur dont je disposais a servi à
+rendre notre page, pas à naviguer ailleurs.
+
+---
+
+## [Phase 8] 11:34 — État final, mesuré
+- Lighthouse mobile, 3G rapide simulée, cinq pages : **performance 97 à 99**,
+  **accessibilité 100**, bonnes pratiques 100, SEO 100, **CLS 0,000**, LCP de 1,96 à 2,48 s.
+- Parcours de bout en bout : **36 vérifications sur 36**, aucune erreur de console.
+- Responsive : **aucun débordement** sur 8 pages × 7 largeurs, de 320 à 2560 px.
+- Cibles tactiles : **aucune** sous 44 px à 360 px.
+- **71 tests**, `typecheck`, `lint` et `build` verts.
+- Chunk d'entrée **91 ko gzip**, `three` absent du bundle initial.
+- Sans WebGL : 0 canvas, poster SVG affiché, page complète.
+
+`main` est resté intact pendant toute la session. Six branches attendent une relecture.

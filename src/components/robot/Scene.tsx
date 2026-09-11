@@ -71,7 +71,7 @@ export default function Scene({ cible, capacites, visible, modelUrl }: Props) {
       frameloop="demand"
       dpr={capacites.dpr}
       shadows={capacites.ombres}
-      camera={{ position: [0, 0.1, 3.1], fov: 32 }}
+      camera={{ position: [0, 0.03, 3.2], fov: 32 }}
       gl={{
         antialias: !capacites.tactile,
         powerPreference: 'low-power',
@@ -85,16 +85,25 @@ export default function Scene({ cible, capacites, visible, modelUrl }: Props) {
 
       {/* Éclairage : trois sources, aucune de plus. L'arête lumineuse du modèle fait
           le reste du travail. */}
-      <ambientLight intensity={0.35} color={couleurs.craie} />
+      {/* Quatre sources, et elles sont toutes nécessaires.
+          Un matériau métallique sans carte d'environnement ne réfléchit rien : la
+          première version, à `metalness` 0,8 et deux lumières, rendait le buste
+          presque invisible sur le fond noir. Constaté sur capture, pas déduit. */}
+      <ambientLight intensity={0.9} color={couleurs.craie} />
+
+      {/* Clé, en haut à droite : c'est elle qui sculpte le volume. */}
       <directionalLight
-        position={[2.4, 2.8, 2.2]}
-        intensity={1.5}
+        position={[2.6, 3.2, 3.4]}
+        intensity={2.6}
         color={couleurs.craie}
         castShadow={capacites.ombres}
       />
-      {/* Contre-jour côté opposé, dans la couleur d'accent : c'est ce qui détache la
-          silhouette du fond noir. */}
-      <directionalLight position={[-2.6, 0.6, -1.4]} intensity={1.1} color={couleurs.mesure} />
+
+      {/* Appoint frontal doux, pour que la visière et la mâchoire se lisent. */}
+      <directionalLight position={[-1.6, 0.4, 3.2]} intensity={1.4} color={couleurs.craie} />
+
+      {/* Contre-jour dans la couleur d'accent : il détache la silhouette du fond. */}
+      <directionalLight position={[-3.2, 1.2, -2.2]} intensity={2.4} color={couleurs.mesure} />
 
       <Suspense fallback={null}>
         {modelUrl ? <ModeleGLB url={modelUrl} /> : <BusteProcedural cible={cible} anime={anime} />}
