@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, Search, X } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { modeDeveloppementLocal } from './lib/backend';
+import { configurationManquante } from './lib/backend';
 import { useAuth } from './app/auth';
 import { CHEMINS, useNavigatePage } from './app/navigation';
 import { Button } from './components/ui/Button';
@@ -17,6 +17,7 @@ const OmnisearchModal = lazy(() =>
 
 const LIENS_PUBLICS = [
   { to: CHEMINS.evaluation, libelle: 'Évaluation' },
+  { to: CHEMINS.classement, libelle: 'Classement' },
   { to: '/savoir', libelle: 'Savoir' },
   { to: '/pays', libelle: 'Pays' },
   { to: '/quiz', libelle: 'Quiz' },
@@ -69,7 +70,7 @@ export default function App() {
         </Suspense>
       )}
 
-      <BandeauDeveloppement />
+      <BandeauConfiguration />
 
       <header className="sticky top-0 z-40 border-b border-ardoise bg-noir/95">
         <nav aria-label="Navigation principale" className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -224,22 +225,24 @@ function AttentePage() {
 }
 
 /**
- * Bandeau permanent en mode développement local.
+ * Bandeau affiché quand le serveur n'est pas configuré.
  *
- * Il n'est pas décoratif et il n'est pas refermable : sans backend configuré,
- * l'authentification n'est pas réelle et rien n'est enregistré ailleurs que dans ce
- * navigateur. L'utilisateur doit le savoir en permanence, pas une fois au démarrage.
+ * Il n'annonce PAS un mode dégradé : il n'y en a plus. L'ancien adaptateur local
+ * acceptait n'importe quel mot de passe, et une fausse authentification qui ressemble
+ * à une vraie n'a rien à faire dans un produit en ligne. Sans configuration, les
+ * écrans publics restent lisibles et tout ce qui demande un compte échoue avec un
+ * message explicite — ce qui est la vérité, et non un contournement.
  */
-function BandeauDeveloppement() {
-  if (!modeDeveloppementLocal) return null;
+function BandeauConfiguration() {
+  if (!configurationManquante) return null;
 
   return (
     <div role="status" className="border-b border-alerte bg-noir">
       <p className="mx-auto max-w-6xl px-4 py-2 text-micro text-brume sm:px-6">
-        <span className="text-alerte">Mode développement local.</span> Aucun serveur n’est
-        configuré : la connexion ne vérifie aucun mot de passe, et vos données restent dans
-        ce navigateur. Renseignez <span className="nombres">VITE_SUPABASE_URL</span> pour
-        activer le vrai backend.
+        <span className="text-alerte">Serveur non configuré.</span> Les comptes,
+        l’enregistrement des passations et le classement sont indisponibles. Renseignez{' '}
+        <span className="nombres">VITE_SUPABASE_URL</span> et{' '}
+        <span className="nombres">VITE_SUPABASE_ANON_KEY</span> — voir docs/SUPABASE.md.
       </p>
     </div>
   );

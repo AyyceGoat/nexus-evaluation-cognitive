@@ -49,6 +49,8 @@ export const CHEMINS = {
   inscription: '/inscription',
   connexion: '/connexion',
   motDePasseOublie: '/mot-de-passe',
+  nouveauMotDePasse: '/mot-de-passe/nouveau',
+  classement: '/classement',
   bienvenue: '/bienvenue',
   tableauDeBord: '/tableau-de-bord',
   profil: '/profil',

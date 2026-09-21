@@ -1,6 +1,6 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { backend, modeDeveloppementLocal } from '../lib/backend';
+import { backend } from '../lib/backend';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
 import { CHEMINS } from '../app/navigation';
@@ -60,9 +60,18 @@ export function Inscription() {
         titre="Vérifiez votre boîte mail"
         sous={`Un lien de confirmation part vers ${email}. Ouvrez-le pour activer votre compte, puis connectez-vous.`}
       >
-        <Link to={CHEMINS.connexion} className="inline-flex">
-          <Button variant="secondaire">Aller à la connexion</Button>
-        </Link>
+        <div className="flex flex-col gap-4">
+          <p className="mesure-texte text-petit text-brume">
+            Sans confirmation, la connexion est refusée : c’est ce qui garantit que
+            l’adresse vous appartient. Regardez aussi vos courriers indésirables.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to={CHEMINS.connexion} className="inline-flex">
+              <Button variant="principal">Aller à la connexion</Button>
+            </Link>
+            <RenvoiConfirmation email={email} />
+          </div>
+        </div>
       </Cadre>
     );
   }
@@ -172,6 +181,14 @@ export function Connexion() {
         </Button>
       </form>
 
+      {/* L'adresse n'est pas confirmée : proposer le renvoi plutôt que de laisser
+          l'utilisateur chercher un message qu'il a peut-être perdu. */}
+      {erreur?.includes('Confirmez votre adresse') && (
+        <div className="mt-5">
+          <RenvoiConfirmation email={email} />
+        </div>
+      )}
+
       <div className="mt-6 flex flex-col gap-2 text-petit text-brume">
         <Link
           to={CHEMINS.motDePasseOublie}
@@ -229,13 +246,6 @@ export function MotDePasseOublie() {
       titre="Réinitialiser mon mot de passe"
       sous="Saisissez votre adresse : vous recevrez un lien pour en choisir un nouveau."
     >
-      {modeDeveloppementLocal && (
-        <p className="mb-6 border-l-2 border-alerte pl-4 text-petit text-brume">
-          En mode développement local, aucun e-mail n’est envoyé. Cette fonction exige un
-          projet Supabase configuré.
-        </p>
-      )}
-
       <form onSubmit={soumettre} noValidate className="flex flex-col gap-5">
         <Field
           label="Adresse e-mail"
@@ -256,6 +266,177 @@ export function MotDePasseOublie() {
           Retour à la connexion
         </Link>
       </p>
+    </Cadre>
+  );
+}
+
+/**
+ * Renvoi du message de confirmation.
+ *
+ * Le bouton se désarme après un envoi : Supabase limite la cadence, et proposer un
+ * bouton qui échouera à la deuxième pression serait pire que ne rien proposer.
+ */
+function RenvoiConfirmation({ email }: { email: string }) {
+  const [etat, setEtat] = useState<'pret' | 'envoi' | 'envoye'>('pret');
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  if (etat === 'envoye') {
+    return (
+      <p role="status" className="text-petit text-mesure">
+        Message renvoyé. Il peut mettre une minute à arriver.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        variant="secondaire"
+        disabled={etat === 'envoi' || !email}
+        onClick={() => {
+          setErreur(null);
+          setEtat('envoi');
+          void backend.renvoyerConfirmation(email).then((resultat) => {
+            if (resultat.ok) {
+              setEtat('envoye');
+            } else {
+              setEtat('pret');
+              setErreur(resultat.message);
+            }
+          });
+        }}
+      >
+        {etat === 'envoi' ? 'Envoi…' : 'Renvoyer le lien de confirmation'}
+      </Button>
+      {erreur && (
+        <p role="alert" className="text-petit text-alerte">
+          {erreur}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Choix d'un nouveau mot de passe, après avoir suivi le lien reçu par e-mail.
+ *
+ * Le lien porte un jeton de récupération que le client Supabase transforme en session
+ * à l'arrivée sur la page. Si cette session n'existe pas — lien périmé, ouvert dans un
+ * autre navigateur, ou page atteinte directement — on le dit et on renvoie vers la
+ * demande d'un nouveau lien, au lieu d'afficher un formulaire qui échouera.
+ */
+export function NouveauMotDePasse() {
+  const navigate = useNavigate();
+
+  const [session, setSession] = useState<'verification' | 'valide' | 'absente'>(
+    'verification'
+  );
+  const [motDePasse, setMotDePasse] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+
+  useEffect(() => {
+    let annule = false;
+    let minuteur = 0;
+
+    // `detectSessionInUrl` traite le jeton de façon asynchrone : on laisse à
+    // l'abonnement le temps de rendre la session avant de conclure à son absence.
+    const desabonner = backend.surChangementAuth((utilisateur) => {
+      if (!annule && utilisateur) setSession('valide');
+    });
+
+    void backend.utilisateurCourant().then((utilisateur) => {
+      if (annule) return;
+      if (utilisateur) {
+        setSession('valide');
+        return;
+      }
+      minuteur = window.setTimeout(() => {
+        if (!annule) setSession((etat) => (etat === 'valide' ? etat : 'absente'));
+      }, 1500);
+    });
+
+    return () => {
+      annule = true;
+      window.clearTimeout(minuteur);
+      desabonner();
+    };
+  }, []);
+
+  async function soumettre(evenement: FormEvent) {
+    evenement.preventDefault();
+    setErreur(null);
+
+    if (motDePasse !== confirmation) {
+      setErreur('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
+    if (motDePasse.length < 8) {
+      setErreur('Le mot de passe doit compter au moins 8 caractères.');
+      return;
+    }
+
+    setEnvoi(true);
+    const resultat = await backend.changerMotDePasse(motDePasse);
+    setEnvoi(false);
+
+    if (!resultat.ok) {
+      setErreur(resultat.message);
+      return;
+    }
+    navigate(CHEMINS.tableauDeBord, { replace: true });
+  }
+
+  if (session === 'verification') {
+    return (
+      <Cadre titre="Vérification du lien" sous="Un instant.">
+        <div className="squelette h-11 w-full rounded-1" aria-hidden="true" />
+      </Cadre>
+    );
+  }
+
+  if (session === 'absente') {
+    return (
+      <Cadre
+        titre="Ce lien n’est plus valable"
+        sous="Les liens de réinitialisation expirent au bout d’une heure, et ne fonctionnent que dans le navigateur qui les a demandés."
+      >
+        <Link to={CHEMINS.motDePasseOublie} className="inline-flex">
+          <Button variant="principal">Demander un nouveau lien</Button>
+        </Link>
+      </Cadre>
+    );
+  }
+
+  return (
+    <Cadre
+      titre="Choisir un nouveau mot de passe"
+      sous="Il remplacera l’ancien immédiatement, et vous resterez connecté."
+    >
+      <form onSubmit={soumettre} noValidate className="flex flex-col gap-5">
+        <Field
+          label="Nouveau mot de passe"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={motDePasse}
+          onChange={(e) => setMotDePasse(e.target.value)}
+          aide="Au moins 8 caractères."
+        />
+        <Field
+          label="Confirmer le mot de passe"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+          erreur={erreur}
+        />
+        <Button type="submit" variant="principal" disabled={envoi}>
+          {envoi ? 'Enregistrement…' : 'Enregistrer le mot de passe'}
+        </Button>
+      </form>
     </Cadre>
   );
 }

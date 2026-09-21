@@ -27,9 +27,14 @@ const PageQuiz = lazy(() => import('./pages/ecransPublics').then((m) => ({ defau
 const PageArticle = lazy(() => import('./pages/ecransPublics').then((m) => ({ default: m.PageArticle })));
 const RedirectionSavoir = lazy(() => import('./pages/ecransPublics').then((m) => ({ default: m.RedirectionSavoir })));
 
+const Classement = lazy(() => import('./pages/Classement').then((m) => ({ default: m.Classement })));
+
 const Inscription = lazy(() => import('./pages/auth').then((m) => ({ default: m.Inscription })));
 const Connexion = lazy(() => import('./pages/auth').then((m) => ({ default: m.Connexion })));
 const MotDePasseOublie = lazy(() => import('./pages/auth').then((m) => ({ default: m.MotDePasseOublie })));
+const NouveauMotDePasse = lazy(() =>
+  import('./pages/auth').then((m) => ({ default: m.NouveauMotDePasse }))
+);
 
 const Bienvenue = lazy(() => import('./pages/Bienvenue').then((m) => ({ default: m.Bienvenue })));
 const TableauDeBord = lazy(() => import('./pages/TableauDeBord').then((m) => ({ default: m.TableauDeBord })));
@@ -51,6 +56,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/savoir/:categoryId" element={<PageSavoir />} />
             <Route path="/pays" element={<PagePays />} />
             <Route path="/quiz" element={<PageQuiz />} />
+            {/* Le classement est public : il se consulte sans compte. */}
+            <Route path={CHEMINS.classement} element={<Classement />} />
             <Route
               path="/article/:categoryId/:sectionIndex/:subIndex?"
               element={<PageArticle />}
@@ -86,6 +93,11 @@ createRoot(document.getElementById('root')!).render(
                 </RouteInvite>
               }
             />
+            {/* Sans garde `RouteInvite` : le lien de réinitialisation ouvre une
+                session de récupération, donc la personne EST connectée en arrivant.
+                Une garde « invité » la renverrait au tableau de bord sans qu'elle
+                ait pu choisir son nouveau mot de passe. */}
+            <Route path={CHEMINS.nouveauMotDePasse} element={<NouveauMotDePasse />} />
 
             {/* ── Espace connecté ─────────────────────────────────────── */}
             <Route

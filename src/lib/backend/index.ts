@@ -1,35 +1,35 @@
-import { backendLocal } from './local';
-import type { BackendPort, ModeBackend } from './types';
+import type { BackendPort } from './types';
 
 /**
- * Choisit l'implémentation à partir de la configuration.
+ * Accès au backend.
  *
- * Une seule règle : si `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` sont présentes,
- * on parle au vrai backend. Sinon on retombe sur l'adaptateur local de développement,
- * et l'interface affiche un bandeau permanent qui le dit.
+ * ── Une seule implémentation, volontairement ──
  *
- * Il n'y a volontairement pas de troisième cas : pas de « demi-configuration » qui
- * marcherait à moitié sans qu'on sache laquelle des deux moitiés répond.
+ * Il n'existe plus d'adaptateur local. L'ancien acceptait n'importe quel mot de
+ * passe et gardait tout dans le navigateur ; un bandeau l'annonçait, mais une fausse
+ * authentification qui ressemble à une vraie n'a rien à faire dans un produit qu'on
+ * met en ligne. Sans configuration Supabase, l'application ne propose donc PAS un
+ * mode dégradé : elle affiche un écran de configuration et refuse de faire semblant.
  *
  * ── Pourquoi une façade et pas un simple `const` ──
  *
- * `@supabase/supabase-js` pèse une cinquantaine de kilo-octets compressés, Realtime
+ * `@supabase/supabase-js` pèse une soixantaine de kilo-octets compressés, Realtime
  * compris alors qu'on ne s'en sert pas. Importée statiquement, la bibliothèque
- * atterrissait dans le chunk d'entrée et faisait passer celui-ci de 66 à 150 ko gzip —
+ * atterrissait dans le chunk d'entrée et le faisait passer de 66 à 150 ko gzip —
  * payé par tout visiteur de la landing, qui n'a besoin d'aucun backend pour la lire.
  *
- * La façade ci-dessous expose l'interface de façon synchrone tout en chargeant
- * l'implémentation au premier appel réel. En mode local, la bibliothèque n'est jamais
- * téléchargée du tout.
+ * La façade expose l'interface de façon synchrone tout en chargeant l'implémentation
+ * au premier appel réel.
  */
 
 const url = import.meta.env.VITE_SUPABASE_URL?.trim();
 const cleAnon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-const configure = Boolean(url && cleAnon);
+/** Vrai quand `VITE_SUPABASE_URL` ou `VITE_SUPABASE_ANON_KEY` manque. */
+export const configurationManquante = !(url && cleAnon);
 
-export const modeBackend: ModeBackend = configure ? 'supabase' : 'local';
-export const modeDeveloppementLocal = modeBackend === 'local';
+const MESSAGE_CONFIGURATION =
+  'Le serveur n’est pas configuré : renseignez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.';
 
 let cache: BackendPort | null = null;
 let enCours: Promise<BackendPort> | null = null;
@@ -39,10 +39,7 @@ export function obtenirBackend(): Promise<BackendPort> {
   if (enCours) return enCours;
 
   enCours = (async () => {
-    if (!configure) {
-      cache = backendLocal;
-      return cache;
-    }
+    if (configurationManquante) throw new Error(MESSAGE_CONFIGURATION);
     const { creerBackendSupabase, creerClientSupabase } = await import('./supabase');
     cache = creerBackendSupabase(creerClientSupabase(url as string, cleAnon as string));
     return cache;
@@ -58,16 +55,19 @@ const delegue =
     prendre(await obtenirBackend())(...args);
 
 export const backend: BackendPort = {
-  mode: modeBackend,
-
   utilisateurCourant: delegue((p) => p.utilisateurCourant),
   inscrire: delegue((p) => p.inscrire),
   connecter: delegue((p) => p.connecter),
   deconnecter: delegue((p) => p.deconnecter),
   demanderReinitialisation: delegue((p) => p.demanderReinitialisation),
+  changerMotDePasse: delegue((p) => p.changerMotDePasse),
+  renvoyerConfirmation: delegue((p) => p.renvoyerConfirmation),
   lireProfil: delegue((p) => p.lireProfil),
   majProfil: delegue((p) => p.majProfil),
   marquerOnboarde: delegue((p) => p.marquerOnboarde),
+  definirPseudonyme: delegue((p) => p.definirPseudonyme),
+  definirVisibiliteClassement: delegue((p) => p.definirVisibiliteClassement),
+  lireClassement: delegue((p) => p.lireClassement),
   listerPassations: delegue((p) => p.listerPassations),
   ouvrirPassation: delegue((p) => p.ouvrirPassation),
   enregistrerReponse: delegue((p) => p.enregistrerReponse),
@@ -85,10 +85,16 @@ export const backend: BackendPort = {
     let annule = false;
     let desabonner: (() => void) | null = null;
 
-    void obtenirBackend().then((port) => {
-      if (annule) return;
-      desabonner = port.surChangementAuth(rappel);
-    });
+    void obtenirBackend()
+      .then((port) => {
+        if (annule) return;
+        desabonner = port.surChangementAuth(rappel);
+      })
+      .catch(() => {
+        // Sans configuration, il n'y a pas de session à observer : on annonce
+        // « personne n'est connecté » plutôt que de laisser l'écran en attente.
+        if (!annule) rappel(null);
+      });
 
     return () => {
       annule = true;

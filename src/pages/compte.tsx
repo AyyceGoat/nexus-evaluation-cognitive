@@ -102,7 +102,9 @@ export function Parametres() {
       <Entete titre="Paramètres" sous="Réglages du compte et de la session." />
 
       <div className="mt-10 flex flex-col gap-10">
-        <section className="flex flex-col gap-3">
+        <ReglagesClassement />
+
+        <section className="flex flex-col gap-3 border-t border-ardoise pt-10">
           <h2 className="text-t3 text-craie">Session</h2>
           <p className="mesure-texte text-petit text-brume">
             Vous déconnecter ne supprime rien : vos passations restent enregistrées.
@@ -142,5 +144,131 @@ export function NonTrouve() {
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * Consentement au classement public, et choix du pseudonyme.
+ *
+ * Deux principes, tous deux appliqués côté serveur et pas seulement ici :
+ *
+ * 1. Rien n'est publié par défaut. La case est décochée à la création du compte, et
+ *    l'activer est un geste explicite.
+ * 2. Ni le pseudonyme ni le consentement ne sont modifiables par une écriture
+ *    directe : les privilèges de colonne l'interdisent, et la fonction serveur
+ *    vérifie que l'adresse e-mail est confirmée avant de publier quoi que ce soit.
+ *
+ * L'écran dit aussi ce qui sera publié, avant de le publier. Une case à cocher dont
+ * on doit deviner l'effet n'est pas un consentement.
+ */
+function ReglagesClassement() {
+  const { utilisateur, profil, rafraichirProfil } = useAuth();
+
+  const [pseudonyme, setPseudonyme] = useState(profil?.pseudonyme ?? '');
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [succes, setSucces] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+
+  const visible = profil?.classementVisible ?? false;
+  const confirme = utilisateur?.emailConfirme ?? false;
+
+  async function basculer(prochain: boolean) {
+    setErreur(null);
+    setSucces(null);
+    setEnvoi(true);
+
+    const resultat = await backend.definirVisibiliteClassement(
+      prochain,
+      pseudonyme.trim() || undefined
+    );
+    setEnvoi(false);
+
+    if (!resultat.ok) {
+      setErreur(resultat.message);
+      return;
+    }
+    await rafraichirProfil();
+    setSucces(
+      prochain
+        ? 'Vous figurez au classement avec votre passation la plus récente.'
+        : 'Vous ne figurez plus au classement, et votre ligne a été supprimée.'
+    );
+  }
+
+  async function enregistrerPseudonyme(evenement: FormEvent) {
+    evenement.preventDefault();
+    setErreur(null);
+    setSucces(null);
+    setEnvoi(true);
+
+    const resultat = await backend.definirPseudonyme(pseudonyme.trim());
+    setEnvoi(false);
+
+    if (!resultat.ok) {
+      setErreur(resultat.message);
+      return;
+    }
+    await rafraichirProfil();
+    setSucces('Pseudonyme enregistré.');
+  }
+
+  return (
+    <section className="flex flex-col gap-4">
+      <h2 className="text-t3 text-craie">Classement public</h2>
+
+      <p className="mesure-texte text-petit text-brume">
+        Si vous y figurez, sont publiés : votre pseudonyme, votre niveau, votre indice
+        avec son intervalle, le détail par aptitude et la date de passation. Ni votre
+        adresse e-mail, ni votre nom, ni aucune autre donnée.
+      </p>
+
+      {!confirme && (
+        <p className="mesure-texte border-l-2 border-alerte pl-4 text-petit text-brume">
+          Confirmez d’abord votre adresse e-mail : seuls les comptes confirmés peuvent
+          figurer au classement.
+        </p>
+      )}
+
+      <form onSubmit={enregistrerPseudonyme} noValidate className="flex flex-col gap-4">
+        <Field
+          label="Pseudonyme"
+          value={pseudonyme}
+          onChange={(e) => setPseudonyme(e.target.value)}
+          aide="3 à 24 lettres, chiffres, tirets ou tirets bas. Évitez votre vrai nom."
+          erreur={erreur}
+        />
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="submit"
+            variant="secondaire"
+            disabled={envoi || !pseudonyme.trim() || pseudonyme.trim() === profil?.pseudonyme}
+          >
+            {envoi ? 'Enregistrement…' : 'Enregistrer le pseudonyme'}
+          </Button>
+
+          <Button
+            variant={visible ? 'secondaire' : 'principal'}
+            disabled={envoi || !confirme || (!visible && !pseudonyme.trim())}
+            onClick={() => void basculer(!visible)}
+          >
+            {visible ? 'Me retirer du classement' : 'Figurer au classement'}
+          </Button>
+        </div>
+      </form>
+
+      <p className="text-petit text-brume">
+        État actuel :{' '}
+        <span className={visible ? 'text-mesure' : 'text-craie'}>
+          {visible ? 'vous figurez au classement' : 'vous n’y figurez pas'}
+        </span>
+        .
+      </p>
+
+      {succes && (
+        <p role="status" className="text-petit text-mesure">
+          {succes}
+        </p>
+      )}
+    </section>
   );
 }

@@ -1,27 +1,28 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { IQReport, ItemResponse, ValidityVerdict } from '../iq/types';
+import { assemblerRapport, type AptitudeServeur, type ResultatServeur } from './rapport';
 import {
   echec,
   succes,
   type BackendPort,
+  type EntreeClassement,
+  type Niveau,
   type PassationResume,
   type RapportStocke,
   type Utilisateur,
 } from './types';
 
 /**
- * Implémentation Supabase.
+ * Implémentation Supabase. Seule implémentation du port.
  *
- * Écrite en entier mais JAMAIS EXÉCUTÉE : aucun projet Supabase n'existait au moment
- * de l'écriture (ni CLI ni Docker sur la machine). Le schéma qu'elle attend est dans
- * `supabase/migrations/`. La marche à suivre pour la mettre en service est dans
- * `docs/RETOUR.md`.
+ * Ce qui tient, quelle que soit l'évolution du reste :
  *
- * Ce qui reste vrai quel que soit l'état de configuration :
- * - seule la clé « anon » est utilisée côté navigateur ; la clé de service ne doit
- *   jamais figurer dans le bundle ;
+ * - seule la clé « anon » est utilisée côté navigateur ; la clé de service ne figure
+ *   jamais dans le bundle, et les politiques RLS sont ce qui protège les données ;
  * - le score n'est pas écrit par le client : `cloturerPassation` appelle une fonction
- *   serveur qui recalcule à partir du journal des réponses.
+ *   serveur qui recalcule tout depuis le journal des réponses et le corrigé ;
+ * - le pseudonyme et le consentement au classement passent par des fonctions serveur,
+ *   parce que les privilèges de colonne interdisent de les modifier autrement.
  */
 
 export function creerClientSupabase(url: string, cleAnon: string): SupabaseClient {
@@ -29,12 +30,14 @@ export function creerClientSupabase(url: string, cleAnon: string): SupabaseClien
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      // Nécessaire pour les liens de confirmation d'adresse et de réinitialisation :
+      // le jeton arrive dans l'URL, et la session doit s'établir à l'arrivée.
       detectSessionInUrl: true,
     },
   });
 }
 
-/** Traduit les erreurs Supabase en messages qui disent quoi faire. */
+/** Traduit les erreurs du serveur en messages qui disent quoi faire. */
 function message(erreur: { message?: string; code?: string } | null): string {
   const brut = (erreur?.message ?? '').toLowerCase();
 
@@ -45,13 +48,30 @@ function message(erreur: { message?: string; code?: string } | null): string {
     return 'Un compte existe déjà avec cette adresse. Connectez-vous plutôt.';
   }
   if (brut.includes('email not confirmed')) {
-    return 'Confirmez votre adresse e-mail : le lien vous a été envoyé à l’inscription.';
+    return 'Confirmez votre adresse e-mail : ouvrez le lien reçu à l’inscription. Vous pouvez le faire renvoyer ci-dessous.';
   }
   if (brut.includes('password should be at least')) {
     return 'Le mot de passe doit compter au moins 8 caractères.';
   }
+  if (brut.includes('new password should be different')) {
+    return 'Choisissez un mot de passe différent de l’ancien.';
+  }
   if (brut.includes('rate limit') || brut.includes('too many requests')) {
     return 'Trop de tentatives. Patientez une minute avant de réessayer.';
+  }
+  if (brut.includes('auth session missing') || brut.includes('session_not_found')) {
+    return 'Le lien a expiré. Demandez-en un nouveau.';
+  }
+  // Messages remontés par nos propres fonctions serveur : ils sont déjà rédigés pour
+  // l'écran, on les laisse passer tels quels.
+  if (brut.includes('confirmez votre adresse') || brut.includes('pseudonyme')) {
+    return erreur?.message ?? '';
+  }
+  if (brut.includes('profiles_pseudonyme_unique') || brut.includes('duplicate key')) {
+    return 'Ce pseudonyme est déjà pris. Choisissez-en un autre.';
+  }
+  if (brut.includes('pseudonyme_forme') || brut.includes('violates check constraint')) {
+    return 'Le pseudonyme accepte 3 à 24 lettres, chiffres, tirets ou tirets bas.';
   }
   if (brut.includes('failed to fetch') || brut.includes('network')) {
     return 'La connexion au serveur a échoué. Vérifiez votre réseau, puis réessayez.';
@@ -63,6 +83,8 @@ interface LigneProfil {
   id: string;
   display_name: string | null;
   legal_name: string | null;
+  pseudonyme: string | null;
+  classement_visible: boolean;
   onboarded_at: string | null;
 }
 
@@ -77,19 +99,90 @@ interface LignePassation {
   scaled_upper95: number | null;
   percentile: number | null;
   verdict: ValidityVerdict | null;
+  niveau: Niveau | null;
+}
+
+interface LigneClassement {
+  rang: number;
+  pseudonyme: string;
+  niveau: Niveau;
+  score: number;
+  borne_basse: number;
+  borne_haute: number;
+  centile: number | null;
+  aptitudes: AptitudeServeur[] | null;
+  passee_le: string;
+}
+
+/** Ligne complète d'une passation, telle que la fonction serveur l'écrit. */
+interface LigneResultat extends LignePassation {
+  theta: number | null;
+  standard_error: number | null;
+  validity_message: string | null;
+  aberrant_count: number | null;
+  above_chance_p: number | null;
+  expected_by_chance: number | null;
+  aptitudes: AptitudeServeur[] | null;
+}
+
+const CHAMPS_RESULTAT =
+  'id, started_at, finished_at, item_count, correct_count, theta, standard_error, ' +
+  'scaled_point, scaled_lower95, scaled_upper95, percentile, verdict, niveau, ' +
+  'aptitudes, validity_message, aberrant_count, above_chance_p, expected_by_chance';
+
+function versResultatServeur(ligne: LigneResultat): ResultatServeur {
+  return {
+    sessionId: ligne.id,
+    startedAt: ligne.started_at,
+    finishedAt: ligne.finished_at,
+    itemCount: ligne.item_count,
+    correctCount: ligne.correct_count,
+    theta: ligne.theta,
+    standardError: ligne.standard_error,
+    scaledPoint: ligne.scaled_point,
+    scaledLower95: ligne.scaled_lower95,
+    scaledUpper95: ligne.scaled_upper95,
+    percentile: ligne.percentile,
+    verdict: ligne.verdict,
+    validityMessage: ligne.validity_message,
+    aberrantCount: ligne.aberrant_count,
+    aboveChanceP: ligne.above_chance_p,
+    expectedByChance: ligne.expected_by_chance,
+    aptitudes: ligne.aptitudes,
+  };
 }
 
 export function creerBackendSupabase(client: SupabaseClient): BackendPort {
-  const versUtilisateur = (u: { id: string; email?: string } | null): Utilisateur | null =>
-    u ? { id: u.id, email: u.email ?? '' } : null;
+  const versUtilisateur = (
+    u: { id: string; email?: string; email_confirmed_at?: string | null } | null
+  ): Utilisateur | null =>
+    u
+      ? {
+          id: u.id,
+          email: u.email ?? '',
+          emailConfirme: Boolean(u.email_confirmed_at),
+        }
+      : null;
 
   async function idUtilisateur(): Promise<string | null> {
     const { data } = await client.auth.getUser();
     return data.user?.id ?? null;
   }
 
+  /** Nom porté par l'attestation, si l'utilisateur en a renseigné un. */
+  async function nomLegal(): Promise<string | null> {
+    const uid = await idUtilisateur();
+    if (!uid) return null;
+    const { data } = await client
+      .from('profiles')
+      .select('legal_name')
+      .eq('id', uid)
+      .maybeSingle<{ legal_name: string | null }>();
+    return data?.legal_name ?? null;
+  }
+
   return {
-    mode: 'supabase',
+    // ── Authentification ──────────────────────────────────────────────────
 
     async utilisateurCourant() {
       const { data } = await client.auth.getUser();
@@ -107,7 +200,11 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
       const { error } = await client.auth.signUp({
         email: email.trim(),
         password: motDePasse,
-        options: { data: { display_name: nomAffiche.trim() } },
+        options: {
+          data: { display_name: nomAffiche.trim() },
+          // Le lien de confirmation ramène sur le site, où la session s'établit.
+          emailRedirectTo: `${window.location.origin}/connexion`,
+        },
       });
       return error ? echec(message(error)) : succes(undefined);
     },
@@ -131,13 +228,29 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
       return error ? echec(message(error)) : succes(undefined);
     },
 
+    async changerMotDePasse(nouveau) {
+      const { error } = await client.auth.updateUser({ password: nouveau });
+      return error ? echec(message(error)) : succes(undefined);
+    },
+
+    async renvoyerConfirmation(email) {
+      const { error } = await client.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/connexion` },
+      });
+      return error ? echec(message(error)) : succes(undefined);
+    },
+
+    // ── Profil ────────────────────────────────────────────────────────────
+
     async lireProfil() {
       const uid = await idUtilisateur();
       if (!uid) return null;
 
       const { data, error } = await client
         .from('profiles')
-        .select('id, display_name, legal_name, onboarded_at')
+        .select('id, display_name, legal_name, pseudonyme, classement_visible, onboarded_at')
         .eq('id', uid)
         .maybeSingle<LigneProfil>();
 
@@ -146,6 +259,8 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
         id: data.id,
         nomAffiche: data.display_name,
         nomLegal: data.legal_name,
+        pseudonyme: data.pseudonyme,
+        classementVisible: data.classement_visible,
         onboardeLe: data.onboarded_at,
       };
     },
@@ -177,7 +292,54 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
       return error ? echec(message(error)) : succes(undefined);
     },
 
-    async listerPassations(): Promise<PassationResume[]> {
+    // ── Classement public ─────────────────────────────────────────────────
+
+    async definirPseudonyme(pseudonyme) {
+      const { error } = await client.rpc('definir_pseudonyme', {
+        p_pseudonyme: pseudonyme.trim(),
+      });
+      return error ? echec(message(error)) : succes(undefined);
+    },
+
+    async definirVisibiliteClassement(visible, pseudonyme) {
+      const { error } = await client.rpc('definir_visibilite_classement', {
+        p_visible: visible,
+        p_pseudonyme: pseudonyme?.trim() ?? null,
+      });
+      return error ? echec(message(error)) : succes(undefined);
+    },
+
+    async lireClassement(limite = 100): Promise<EntreeClassement[]> {
+      const { data, error } = await client
+        .from('v_classement')
+        .select('rang, pseudonyme, niveau, score, borne_basse, borne_haute, centile, aptitudes, passee_le')
+        .order('score', { ascending: false })
+        .limit(limite)
+        .returns<LigneClassement[]>();
+
+      if (error || !data) return [];
+      return data.map((l) => ({
+        rang: l.rang,
+        pseudonyme: l.pseudonyme,
+        niveau: l.niveau,
+        score: l.score,
+        borneBasse: l.borne_basse,
+        borneHaute: l.borne_haute,
+        centile: l.centile,
+        aptitudes: (l.aptitudes ?? []).map((a) => ({
+          aptitude: a.aptitude,
+          scaledPoint: a.scaledPoint,
+          radarValue: a.radarValue,
+          itemCount: a.itemCount,
+          correctCount: a.correctCount,
+        })),
+        passeeLe: l.passee_le,
+      }));
+    },
+
+    // ── Passations ────────────────────────────────────────────────────────
+
+    async listerPassations() {
       const { data, error } = await client
         .from('v_mes_passations')
         .select('*')
@@ -196,69 +358,119 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
         borneHaute: l.scaled_upper95,
         centile: l.percentile,
         verdict: l.verdict,
-      }));
+        niveau: l.niveau,
+      })) satisfies PassationResume[];
     },
 
     async ouvrirPassation(itemIds) {
-      const uid = await idUtilisateur();
-      if (!uid) return echec('Connectez-vous pour commencer une évaluation.');
-
-      const { data, error } = await client
-        .from('iq_sessions')
-        .insert({ user_id: uid, item_count: itemIds.length })
-        .select('id')
-        .single<{ id: string }>();
-
-      if (error || !data) return echec(message(error));
-      return succes(data.id);
+      // Passe par une fonction serveur : il n'existe aucune politique d'INSERT sur
+      // `iq_sessions`, précisément pour qu'un client ne puisse pas créer une
+      // passation en y glissant déjà un score.
+      const { data, error } = await client.rpc('ouvrir_passation', { p_item_ids: itemIds });
+      if (error || typeof data !== 'string') return echec(message(error));
+      return succes(data);
     },
 
-    async enregistrerReponse(passationId, reponse: ItemResponse) {
+    async enregistrerReponse(passationId, reponse) {
       const uid = await idUtilisateur();
       if (!uid) return echec('Votre session a expiré. Reconnectez-vous.');
 
-      // `upsert` sur (session_id, item_id) : revenir sur une question remplace la
-      // réponse au lieu d'en ajouter une seconde.
-      const { error } = await client.from('iq_responses').upsert(
-        {
-          session_id: passationId,
-          user_id: uid,
-          item_id: reponse.itemId,
-          selected_index: reponse.selectedIndex,
-          correct: reponse.correct,
-          response_seconds: reponse.responseSeconds,
-        },
-        { onConflict: 'session_id,item_id' }
-      );
+      // `correct` n'est PAS transmis : un déclencheur le calcule depuis le corrigé
+      // serveur. Le privilège d'écriture sur cette colonne est d'ailleurs retiré.
+      // Insertion simple, et non `upsert` : le journal est en ajout seul, et une
+      // réponse n'est écrite qu'une fois, à la clôture.
+      const { error } = await client.from('iq_responses').insert({
+        session_id: passationId,
+        user_id: uid,
+        item_id: reponse.itemId,
+        selected_index: reponse.selectedIndex,
+        response_seconds: reponse.responseSeconds,
+      });
 
       return error ? echec(message(error)) : succes(undefined);
     },
 
-    async cloturerPassation(passationId, _rapportClient: IQReport) {
-      // Le rapport calculé dans le navigateur n'est pas transmis comme résultat : la
-      // fonction serveur recalcule à partir du journal des réponses, avec les
-      // paramètres d'items calibrés que le client ne possède pas.
-      void _rapportClient;
+    async cloturerPassation(passationId, _items) {
+      void _items;
 
-      const { data, error } = await client.functions.invoke<{ rapport: IQReport }>(
-        'cloturer-passation',
-        { body: { session_id: passationId } }
-      );
+      const { data, error } = await client.functions.invoke<{
+        resultat: LigneResultat | null;
+      }>('cloturer-passation', { body: { sessionId: passationId } });
 
-      if (error || !data?.rapport) {
+      if (error || !data?.resultat) {
         return echec(
           'Le calcul du résultat a échoué côté serveur. Vos réponses sont enregistrées : rouvrez la page pour réessayer.'
         );
       }
-      return succes(data.rapport);
+
+      // Les réponses sont relues depuis la base : leur champ `correct` vient du
+      // corrigé serveur, pas du navigateur.
+      const { data: lignes } = await client
+        .from('iq_responses')
+        .select('item_id, selected_index, correct, response_seconds')
+        .eq('session_id', passationId)
+        .returns<
+          Array<{
+            item_id: string;
+            selected_index: number;
+            correct: boolean;
+            response_seconds: number;
+          }>
+        >();
+
+      const reponses: ItemResponse[] = (lignes ?? []).map((l) => ({
+        itemId: l.item_id,
+        selectedIndex: l.selected_index,
+        correct: l.correct,
+        responseSeconds: Number(l.response_seconds),
+      }));
+
+      const rapport = assemblerRapport(
+        // La fonction serveur rend déjà les champs en camelCase.
+        data.resultat as unknown as ResultatServeur,
+        reponses,
+        await nomLegal()
+      );
+      return succes(rapport satisfies IQReport);
     },
 
     async lireRapport(passationId): Promise<RapportStocke | null> {
-      const { data, error } = await client.functions.invoke<RapportStocke>('lire-rapport', {
-        body: { session_id: passationId },
-      });
-      if (error || !data) return null;
-      return data;
+      // Lecture directe des tables : les politiques RLS restreignent déjà chacune
+      // aux lignes de leur propriétaire, donc aucune fonction serveur n'est
+      // nécessaire pour relire son propre rapport.
+      const { data: passation, error } = await client
+        .from('iq_sessions')
+        .select(CHAMPS_RESULTAT)
+        .eq('id', passationId)
+        .maybeSingle<LigneResultat>();
+
+      if (error || !passation || !passation.finished_at) return null;
+
+      const { data: lignes } = await client
+        .from('iq_responses')
+        .select('item_id, selected_index, correct, response_seconds')
+        .eq('session_id', passationId)
+        .order('answered_at', { ascending: true })
+        .returns<
+          Array<{
+            item_id: string;
+            selected_index: number;
+            correct: boolean;
+            response_seconds: number;
+          }>
+        >();
+
+      const reponses: ItemResponse[] = (lignes ?? []).map((l) => ({
+        itemId: l.item_id,
+        selectedIndex: l.selected_index,
+        correct: l.correct,
+        responseSeconds: Number(l.response_seconds),
+      }));
+
+      return {
+        rapport: assemblerRapport(versResultatServeur(passation), reponses, await nomLegal()),
+        itemIds: reponses.map((r) => r.itemId),
+      };
     },
 
     async itemsRecemmentVus(nombrePassations) {

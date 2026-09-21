@@ -7,7 +7,7 @@ aptitudes et un centile dont la population de référence est nommée.
 Le parti pris du produit est la mesure honnête : lorsque les réponses ne se distinguent
 pas statistiquement d'un tirage au hasard, aucun score n'est affiché.
 
-**Site en ligne : [taupe-lily-ac2081.netlify.app](https://taupe-lily-ac2081.netlify.app)**
+**Site en ligne : [nexus-evaluation-cognitive.netlify.app](https://nexus-evaluation-cognitive.netlify.app)**
 
 ![Page d'accueil de NEXUS](docs/captures/accueil.png)
 
@@ -53,14 +53,33 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
 
 ![Rapport de résultat](docs/captures/rapport.png)
 
-### Comptes et espace personnel
+### Comptes et historique
 
-- Inscription, connexion, réinitialisation de mot de passe.
-- Parcours d'accueil en trois étapes pour un nouveau compte.
-- Tableau de bord, profil et paramètres.
+- Inscription par e-mail avec **confirmation obligatoire** : sans elle, aucune session
+  n'est ouverte et la connexion est refusée, avec possibilité de renvoyer le lien.
+- Connexion, mot de passe oublié, choix d'un nouveau mot de passe par lien reçu,
+  déconnexion.
+- Chaque compte conserve l'historique de ses passations et sa progression.
+- Parcours d'accueil en trois étapes, profil, paramètres.
 - Routes protégées avec retour à la page initialement demandée après connexion.
-- Persistance sur PostgreSQL via Supabase, avec politiques de sécurité au niveau des
-  lignes (RLS) : l'autorisation est portée par la base, pas par le client.
+- Persistance sur PostgreSQL via Supabase, avec **Row Level Security activée sur
+  toutes les tables** : chacun ne lit et ne modifie que ses propres données, et
+  l'autorisation est portée par la base plutôt que par un écran.
+
+### Classement public
+
+- Réservé aux comptes dont l'adresse e-mail est confirmée.
+- Chacun choisit un pseudonyme et décide d'y figurer ; rien n'est publié par défaut.
+- Sont affichés le pseudonyme, le niveau, l'indice avec son intervalle, le détail par
+  aptitude et la date. Ni adresse e-mail, ni nom, ni identifiant de compte : la vue
+  publique ne les expose pas.
+- **Le score n'est jamais envoyé par le navigateur.** Le client enregistre les index
+  choisis et les durées ; une fonction serveur recalcule θ, l'indice, l'intervalle, le
+  verdict de validité et le détail par aptitude à partir du journal des réponses et
+  d'une table de corrigé qu'aucun client ne peut lire. La justesse de chaque réponse
+  est déterminée par un déclencheur PostgreSQL.
+- Aucune politique d'écriture n'existe sur la table du classement ni sur celle des
+  passations : une tentative d'insertion directe est refusée par la base.
 
 ### Bases de connaissances
 
@@ -96,8 +115,8 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
 | Styles | Tailwind CSS 4 (configuration CSS-first via `@theme`) |
 | Routage | React Router 7 |
 | 3D | three.js, React Three Fiber, drei, maath |
-| Backend | Supabase — PostgreSQL, Auth, RLS, Edge Functions (Deno) |
-| Tests | Vitest — 71 tests unitaires |
+| Backend | Supabase — PostgreSQL, Auth avec confirmation d’e-mail, RLS, fonctions SQL `security definer`, Edge Function (Deno) |
+| Tests | Vitest — 55 tests unitaires, dont la parité entre le calcul client et le calcul serveur |
 | Qualité | ESLint 10, contrôle de jetons de design, audits Lighthouse et Puppeteer |
 | Déploiement | Netlify |
 
@@ -131,7 +150,13 @@ cp .env.example .env
 | `SUPABASE_SERVICE_ROLE_KEY` | serveur | Réservée aux Edge Functions |
 
 Aucune valeur préfixée `VITE_` n'est secrète : le préfixe inclut la variable dans le
-bundle envoyé au navigateur. Le fichier `.env` est ignoré par Git.
+bundle envoyé au navigateur, et ce sont les politiques RLS qui protègent les données.
+`SUPABASE_SERVICE_ROLE_KEY`, en revanche, contourne RLS : elle est injectée
+automatiquement dans les Edge Functions, n'a pas à être déclarée ailleurs, et ne doit
+jamais être commitée. Le fichier `.env` est ignoré par Git.
+
+La création du projet Supabase, le schéma à appliquer et les valeurs à copier sont
+détaillés pas à pas dans [`docs/SUPABASE.md`](docs/SUPABASE.md).
 
 ### Commandes
 
@@ -148,6 +173,8 @@ bundle envoyé au navigateur. Le fichier `.env` est ignoré par Git.
 | `npm run verifie:rendu` | Rendu réel : débordements de 320 à 2560 px, cibles tactiles, focus |
 | `npm run verifie:lighthouse` | Audit Lighthouse sur les pages principales |
 | `npm run verifie:parcours` | Parcours de bout en bout dans un navigateur |
+| `npm run verifie:rls` | Tente de violer chaque règle d'accès sur un vrai projet Supabase |
+| `npm run verifie:seed` | Vérifie que le corrigé serveur correspond à la banque d'items |
 
 ---
 
@@ -173,7 +200,7 @@ src/
 └── index.css            Jetons de thème : couleurs, typographie, rayons, mouvement
 
 supabase/
-├── migrations/          Schéma PostgreSQL et politiques RLS
+├── migrations/          Schéma, politiques RLS, fonctions serveur, banque d'items
 └── functions/           Edge Functions : clôture de passation, score serveur
 
 scripts/                 Outils de vérification : contraste, jetons, rendu, Lighthouse
@@ -198,4 +225,4 @@ bridage réseau.
 | Chunk d'entrée | 91 ko compressés, `three` exclu du chargement initial |
 | Débordement horizontal | aucun, de 320 à 2560 px |
 | Cible tactile sous 44 px | aucune |
-| Tests unitaires | 71 |
+| Tests unitaires | 55 |

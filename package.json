@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "dev": "vite",
-    "lint": "eslint . && node scripts/verifie-tokens.mjs",
+    "genere:seed": "node scripts/genere-seed-items.mjs",
+    "lint": "eslint . && node scripts/verifie-tokens.mjs && node scripts/verifie-seed-items.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -15,7 +16,9 @@
     "verifie:design": "node scripts/verifie-tokens.mjs",
     "verifie:lighthouse": "node scripts/lighthouse.mjs",
     "verifie:parcours": "node scripts/parcours-complet.mjs",
-    "verifie:rendu": "node scripts/verifie-rendu.mjs"
+    "verifie:rendu": "node scripts/verifie-rendu.mjs",
+    "verifie:rls": "node scripts/verifie-rls.mjs",
+    "verifie:seed": "node scripts/verifie-seed-items.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

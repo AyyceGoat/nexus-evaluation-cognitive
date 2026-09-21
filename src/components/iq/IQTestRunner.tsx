@@ -120,16 +120,20 @@ export function IQTestRunner() {
     setReport(built);
     setStage('done');
 
-    // Persistance distante quand un compte existe. Le rapport affiché reste celui
-    // calculé ici ; en mode Supabase, `cloturerPassation` renvoie celui recalculé
-    // par le serveur, qui fait foi.
+    // Persistance distante quand un compte existe.
+    //
+    // Le rapport calculé ci-dessus n'est qu'un affichage immédiat : il n'est jamais
+    // transmis au serveur. La fonction serveur recalcule tout depuis les réponses
+    // enregistrées et son propre corrigé, puis son résultat REMPLACE celui-ci — y
+    // compris s'il est moins flatteur. C'est lui qui fait foi et lui seul qui peut
+    // paraître au classement.
     const distante = passationDistante.current;
     if (utilisateur && distante) {
       void (async () => {
         for (const reponse of responses) {
           await backend.enregistrerReponse(distante, reponse);
         }
-        const cloture = await backend.cloturerPassation(distante, built);
+        const cloture = await backend.cloturerPassation(distante, items);
         if (cloture.ok) setReport(cloture.valeur);
       })();
     }
