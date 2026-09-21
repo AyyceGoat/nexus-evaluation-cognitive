@@ -6,7 +6,6 @@ import {
   type PassationResume,
   type Profil,
   type RapportStocke,
-  type Transaction,
   type Utilisateur,
 } from './types';
 
@@ -45,16 +44,12 @@ interface EtatLocal {
       rapport: IQReport | null;
     }
   >;
-  droits: string[];
-  transactions: Transaction[];
 }
 
 const etatVide = (): EtatLocal => ({
   utilisateur: null,
   profil: null,
   passations: {},
-  droits: [],
-  transactions: [],
 });
 
 function lire(): EtatLocal {
@@ -183,7 +178,7 @@ export const backendLocal: BackendPort = {
   async listerPassations() {
     const etat = lire();
     return Object.values(etat.passations)
-      .map((p) => ({ ...p.resume, rapportDebloque: etat.droits.includes(p.resume.id) }))
+      .map((p) => p.resume)
       .sort((a, b) => b.commenceeLe.localeCompare(a.commenceeLe));
   },
 
@@ -204,7 +199,6 @@ export const backendLocal: BackendPort = {
         borneHaute: null,
         centile: null,
         verdict: null,
-        rapportDebloque: false,
       },
       itemIds,
       reponses: [],
@@ -262,39 +256,4 @@ export const backendLocal: BackendPort = {
       .slice(0, nombrePassations)
       .flatMap((p) => p.itemIds);
   },
-
-  async rapportDebloque(passationId) {
-    return lire().droits.includes(passationId);
-  },
-
-  async listerTransactions() {
-    return lire()
-      .transactions.slice()
-      .sort((a, b) => b.creeeLe.localeCompare(a.creeeLe));
-  },
 };
-
-/** Réservé au provider de paiement sandbox : accorde un droit d'accès en mode local. */
-export function accorderDroitLocal(passationId: string, transaction: Transaction): void {
-  const etat = lire();
-  if (!etat.droits.includes(passationId)) etat.droits.push(passationId);
-  etat.transactions = [
-    ...etat.transactions.filter((t) => t.reference !== transaction.reference),
-    transaction,
-  ];
-  ecrire(etat);
-}
-
-/** Réservé au provider de paiement sandbox : enregistre ou met à jour une transaction. */
-export function enregistrerTransactionLocale(transaction: Transaction): void {
-  const etat = lire();
-  etat.transactions = [
-    ...etat.transactions.filter((t) => t.reference !== transaction.reference),
-    transaction,
-  ];
-  ecrire(etat);
-}
-
-export function transactionLocale(reference: string): Transaction | null {
-  return lire().transactions.find((t) => t.reference === reference) ?? null;
-}

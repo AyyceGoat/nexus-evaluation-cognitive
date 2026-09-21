@@ -1,9 +1,4 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../app/auth';
-import { CHEMINS } from '../../app/navigation';
-import { DEVISE, MONTANT_DEBLOCAGE, ouvrirPaiement, paiementEnLocal } from '../../lib/paiement';
-import { Button } from '../ui/Button';
 import { AptitudeProfile } from './AptitudeProfile';
 import { IntervalBar } from './IntervalBar';
 import { IQCertificate } from './IQCertificate';
@@ -16,24 +11,15 @@ interface IQResultsViewProps {
   report: IQReport;
   items: readonly IQItem[];
   onRestart: () => void;
-  /**
-   * Droit d'accès au rapport complet, résolu par l'appelant auprès du backend.
-   *
-   * Ce n'est plus une lecture de `localStorage` : la table `entitlements` n'a aucune
-   * politique d'écriture, donc aucun client ne peut s'accorder ce droit. Un booléen
-   * qui arriverait ici depuis le navigateur n'autoriserait rien côté serveur.
-   */
-  debloque?: boolean;
 }
 
 type Tab = 'profil' | 'corrections' | 'attestation';
 
-export function IQResultsView({ report, items, onRestart, debloque = false }: IQResultsViewProps) {
+export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) {
   const [tab, setTab] = useState<Tab>('profil');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const itemsById = new Map(items.map((item) => [item.id, item]));
-  const unlocked = debloque;
   const interpretable = report.validity.verdict !== 'not_interpretable';
 
   // ── Profil inexploitable : on n'affiche aucun score ────────────────────────
@@ -134,7 +120,7 @@ export function IQResultsView({ report, items, onRestart, debloque = false }: IQ
         ))}
       </div>
 
-      {/* ── Profil par aptitude (gratuit) ───────────────────────────────────── */}
+      {/* ── Profil par aptitude ───────────────────────────────────── */}
       {tab === 'profil' && (
         <AptitudeProfile
           aptitudes={report.aptitudes}
@@ -143,117 +129,106 @@ export function IQResultsView({ report, items, onRestart, debloque = false }: IQ
         />
       )}
 
-      {/* ── Corrections (réservées) ─────────────────────────────────────────── */}
+      {/* ── Corrections ─────────────────────────────────────────── */}
       {tab === 'corrections' && (
         <section>
-          {!unlocked ? (
-            <LockedNotice
-              label={`les corrections détaillées de vos ${report.itemCount} questions`}
-              passationId={report.sessionId}
-            />
-          ) : (
-            <ul className="space-y-3">
-              {report.responses.map((response, position) => {
-                const item = itemsById.get(response.itemId);
-                if (!item) return null;
-                const open = expanded === item.id;
+          <ul className="space-y-3">
+            {report.responses.map((response, position) => {
+              const item = itemsById.get(response.itemId);
+              if (!item) return null;
+              const open = expanded === item.id;
 
-                return (
-                  <li
-                    key={item.id}
-                    className={`rounded-2 border overflow-hidden ${
-                      response.correct
-                        ? 'border-mesure/30 bg-mesure/5'
-                        : 'border-ardoise/50 bg-graphite/40'
-                    }`}
+              return (
+                <li
+                  key={item.id}
+                  className={`rounded-2 border overflow-hidden ${
+                    response.correct
+                      ? 'border-mesure/30 bg-mesure/5'
+                      : 'border-ardoise/50 bg-graphite/40'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => setExpanded(open ? null : item.id)}
+                    className="w-full min-h-11 p-4 flex items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
                   >
-                    <button
-                      type="button"
-                      aria-expanded={open}
-                      onClick={() => setExpanded(open ? null : item.id)}
-                      className="w-full min-h-11 p-4 flex items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
-                    >
-                      <span className="text-sm">
-                        <span className="text-brume mr-2 tabular-nums">{position + 1}.</span>
-                        <span className="text-craie">{APTITUDE_LABEL[item.aptitude]}</span>
-                        <span className="ml-2 text-xs text-brume">
-                          {response.correct ? 'réussie' : 'manquée'}
-                        </span>
+                    <span className="text-sm">
+                      <span className="text-brume mr-2 tabular-nums">{position + 1}.</span>
+                      <span className="text-craie">{APTITUDE_LABEL[item.aptitude]}</span>
+                      <span className="ml-2 text-xs text-brume">
+                        {response.correct ? 'réussie' : 'manquée'}
                       </span>
-                      {open ? (
-                        <ChevronUp className="w-4 h-4 shrink-0" aria-hidden="true" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 shrink-0" aria-hidden="true" />
-                      )}
-                    </button>
-
-                    {open && (
-                      <div className="p-4 sm:p-6 border-t border-ardoise/40 space-y-4">
-                        <p className="text-sm whitespace-pre-line">{item.prompt}</p>
-
-                        {item.visual && (
-                          <MatrixRenderer
-                            matrixData={item.visual}
-                            selectedOptionIndex={response.selectedIndex}
-                            showCorrect
-                            correctOptionIndex={item.correctIndex}
-                            disabled
-                          />
-                        )}
-
-                        {item.options && (
-                          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {item.options.map((option, optionIndex) => {
-                              const isCorrect = optionIndex === item.correctIndex;
-                              const isChosen = optionIndex === response.selectedIndex;
-                              return (
-                                <li
-                                  key={option}
-                                  className={`p-3 rounded-1 border text-xs ${
-                                    isCorrect
-                                      ? 'border-mesure/60 bg-mesure/15 text-mesure'
-                                      : isChosen
-                                        ? 'border-alerte/60 bg-alerte/10 text-alerte'
-                                        : 'border-ardoise/40 text-brume'
-                                  }`}
-                                >
-                                  {option}
-                                  {isCorrect && <span className="ml-2 opacity-80">— bonne réponse</span>}
-                                  {isChosen && !isCorrect && (
-                                    <span className="ml-2 opacity-80">— votre réponse</span>
-                                  )}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-
-                        <div className="p-4 rounded-1 bg-ardoise/40 border border-ardoise/40">
-                          <p className="text-sm text-craie mb-2">{item.explanation}</p>
-                          <ol className="space-y-1 text-xs text-brume list-decimal list-inside">
-                            {item.reasoning.map((step) => (
-                              <li key={step}>{step}</li>
-                            ))}
-                          </ol>
-                        </div>
-                      </div>
+                    </span>
+                    {open ? (
+                      <ChevronUp className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 shrink-0" aria-hidden="true" />
                     )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                  </button>
+
+                  {open && (
+                    <div className="p-4 sm:p-6 border-t border-ardoise/40 space-y-4">
+                      <p className="text-sm whitespace-pre-line">{item.prompt}</p>
+
+                      {item.visual && (
+                        <MatrixRenderer
+                          matrixData={item.visual}
+                          selectedOptionIndex={response.selectedIndex}
+                          showCorrect
+                          correctOptionIndex={item.correctIndex}
+                          disabled
+                        />
+                      )}
+
+                      {item.options && (
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {item.options.map((option, optionIndex) => {
+                            const isCorrect = optionIndex === item.correctIndex;
+                            const isChosen = optionIndex === response.selectedIndex;
+                            return (
+                              <li
+                                key={option}
+                                className={`p-3 rounded-1 border text-xs ${
+                                  isCorrect
+                                    ? 'border-mesure/60 bg-mesure/15 text-mesure'
+                                    : isChosen
+                                      ? 'border-alerte/60 bg-alerte/10 text-alerte'
+                                      : 'border-ardoise/40 text-brume'
+                                }`}
+                              >
+                                {option}
+                                {isCorrect && <span className="ml-2 opacity-80">— bonne réponse</span>}
+                                {isChosen && !isCorrect && (
+                                  <span className="ml-2 opacity-80">— votre réponse</span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      <div className="p-4 rounded-1 bg-ardoise/40 border border-ardoise/40">
+                        <p className="text-sm text-craie mb-2">{item.explanation}</p>
+                        <ol className="space-y-1 text-xs text-brume list-decimal list-inside">
+                          {item.reasoning.map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
 
-      {/* ── Attestation (réservée) ──────────────────────────────────────────── */}
+      {/* ── Attestation ──────────────────────────────────────────── */}
       {tab === 'attestation' && (
         <section>
-          {!unlocked ? (
-            <LockedNotice label="votre attestation de passation" passationId={report.sessionId} />
-          ) : (
-            <IQCertificate report={report} />
-          )}
+          <IQCertificate report={report} />
         </section>
       )}
 
@@ -267,88 +242,6 @@ export function IQResultsView({ report, items, onRestart, debloque = false }: IQ
           Repasser l’évaluation
         </button>
       </div>
-    </div>
-  );
-}
-
-/**
- * Section réservée.
- *
- * Aucun bouton de paiement n'est proposé tant que l'encaissement réel n'existe pas :
- * l'ancienne modale simulait la transaction. Le message dit où en est la fonctionnalité
- * plutôt que de faire semblant de vendre.
- */
-function LockedNotice({ label, passationId }: { label: string; passationId: string }) {
-  const { utilisateur } = useAuth();
-  const navigate = useNavigate();
-  const [ouverture, setOuverture] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
-
-  async function debloquer() {
-    if (!utilisateur) return;
-    setErreur(null);
-    setOuverture(true);
-    try {
-      const checkout = await ouvrirPaiement(utilisateur.id, passationId);
-      navigate(CHEMINS.paiement(checkout.reference));
-    } catch (e) {
-      setOuverture(false);
-      setErreur(
-        e instanceof Error && e.message
-          ? e.message
-          : 'Le paiement n’a pas pu être ouvert. Réessayez dans un instant.'
-      );
-    }
-  }
-
-  return (
-    <div className="max-w-lg border-l-2 border-ardoise py-6 pl-6">
-      <h2 className="text-t3 text-craie">Section réservée</h2>
-      <p className="mesure-texte mt-3 text-petit text-brume">
-        Le rapport complet comprend {label}. Le déblocage coûte{' '}
-        <span className="nombres text-craie">
-          {MONTANT_DEBLOCAGE} {DEVISE}
-        </span>
-        , une seule fois, par mobile money.
-      </p>
-
-      {!utilisateur ? (
-        <div className="mt-5 flex flex-col gap-3">
-          <p className="mesure-texte text-petit text-brume">
-            Le déblocage est rattaché à un compte, pour que vous le retrouviez depuis
-            n’importe quel appareil.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link to={CHEMINS.inscription} className="inline-flex">
-              <Button variant="principal">Créer mon compte</Button>
-            </Link>
-            <Link to={CHEMINS.connexion} className="inline-flex">
-              <Button variant="secondaire">Me connecter</Button>
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-5 flex flex-col gap-3">
-          <div>
-            <Button variant="principal" onClick={() => void debloquer()} disabled={ouverture}>
-              {ouverture
-                ? 'Ouverture du paiement…'
-                : `Débloquer pour ${MONTANT_DEBLOCAGE} ${DEVISE}`}
-            </Button>
-          </div>
-          {erreur && (
-            <p role="alert" className="text-petit text-alerte">
-              {erreur}
-            </p>
-          )}
-          {paiementEnLocal && (
-            <p className="mesure-texte text-micro text-brume">
-              Aucun agrégateur n’est configuré : le paiement passera par le guichet de test,
-              qui ne déplace pas d’argent.
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

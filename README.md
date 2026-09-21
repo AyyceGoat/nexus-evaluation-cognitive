@@ -57,22 +57,10 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
 
 - Inscription, connexion, réinitialisation de mot de passe.
 - Parcours d'accueil en trois étapes pour un nouveau compte.
-- Tableau de bord, profil, paramètres, historique des transactions.
+- Tableau de bord, profil et paramètres.
 - Routes protégées avec retour à la page initialement demandée après connexion.
 - Persistance sur PostgreSQL via Supabase, avec politiques de sécurité au niveau des
   lignes (RLS) : l'autorisation est portée par la base, pas par le client.
-
-### Paiement mobile money
-
-- Déblocage unitaire des corrections détaillées et de l'attestation pour 500 XOF.
-- Couche d'abstraction `PaymentProvider` avec deux implémentations : CinetPay pour le
-  mobile money ivoirien, et un fournisseur local pour le développement.
-- Vérification HMAC-SHA256 de la signature du webhook, avec comparaison à temps
-  constant.
-- Idempotence transactionnelle par verrou atomique en base : un webhook rejoué ne
-  crédite jamais deux fois.
-- Montant et plan déterminés côté serveur ; journal des transitions d'état en
-  ajout seul.
 
 ### Bases de connaissances
 
@@ -109,7 +97,6 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
 | Routage | React Router 7 |
 | 3D | three.js, React Three Fiber, drei, maath |
 | Backend | Supabase — PostgreSQL, Auth, RLS, Edge Functions (Deno) |
-| Paiement | CinetPay (mobile money), vérification HMAC-SHA256 |
 | Tests | Vitest — 71 tests unitaires |
 | Qualité | ESLint 10, contrôle de jetons de design, audits Lighthouse et Puppeteer |
 | Déploiement | Netlify |
@@ -142,11 +129,6 @@ cp .env.example .env
 | `VITE_SUPABASE_URL` | navigateur | URL du projet Supabase |
 | `VITE_SUPABASE_ANON_KEY` | navigateur | Clé publiable ; ce sont les politiques RLS qui protègent les données |
 | `SUPABASE_SERVICE_ROLE_KEY` | serveur | Réservée aux Edge Functions |
-| `CINETPAY_API_KEY` | serveur | Compte marchand |
-| `CINETPAY_SITE_ID` | serveur | Compte marchand |
-| `CINETPAY_SECRET_KEY` | serveur | Vérification de la signature du webhook |
-| `PAYMENT_PROVIDER` | serveur | Fournisseur de paiement actif |
-| `PUBLIC_SITE_URL` | serveur | Construction des URL de retour de paiement |
 
 Aucune valeur préfixée `VITE_` n'est secrète : le préfixe inclut la variable dans le
 bundle envoyé au navigateur. Le fichier `.env` est ignoré par Git.
@@ -185,15 +167,14 @@ src/
 │   ├── knowledge.ts     Base de savoir
 │   └── quiz.ts          465 questions
 ├── lib/
-│   ├── backend/         Port d'accès aux données, implémentations Supabase et locale
-│   ├── iq/              Modèle IRT, échelle, validité, sélection, calibrage, score
-│   └── paiement/        Abstraction fournisseur, CinetPay, magasin de transactions
+│   ├── backend/         Port d'accès aux données, implémentation Supabase
+│   └── iq/              Modèle IRT, échelle, validité, sélection, calibrage, score
 ├── pages/               Écrans publics, authentification, espace connecté
 └── index.css            Jetons de thème : couleurs, typographie, rayons, mouvement
 
 supabase/
 ├── migrations/          Schéma PostgreSQL et politiques RLS
-└── functions/           Edge Functions : création de paiement, webhook
+└── functions/           Edge Functions : clôture de passation, score serveur
 
 scripts/                 Outils de vérification : contraste, jetons, rendu, Lighthouse
 docs/                    Documentation technique et captures d'écran

@@ -2,12 +2,10 @@
  * Parcours de bout en bout, dans un vrai navigateur.
  *
  * Inscription → onboarding → tableau de bord → évaluation complète → rapport →
- * paiement sandbox → déblocage → corrections et attestation.
+ * corrections et attestation, puis déconnexion.
  *
  * Ce script clique réellement : il ne vérifie pas que le code compile, il vérifie que
- * le produit fonctionne. Il tourne en mode développement local, donc l'authentification
- * n'est pas réelle et le paiement ne déplace pas d'argent — c'est précisément ce que le
- * mode annonce à l'écran.
+ * le produit fonctionne.
  *
  * Usage : node scripts/parcours-complet.mjs [url]
  */
@@ -216,8 +214,7 @@ try {
   // Répondre juste demanderait de connaître les réponses : le script ne les a pas.
   // On dépose donc un rapport de test dans le stockage local — celui-là même que
   // l'application écrit — puis on ouvre son URL. Ce n'est pas une simulation du
-  // produit : le rapport traverse le vrai écran, le vrai contrôle de droit d'accès
-  // et le vrai flux de paiement.
+  // produit : le rapport traverse le vrai écran de restitution.
   const referenceRapport = 'iq_parcours_test';
   await page.evaluate((id) => {
     const aptitudes = ['matrix', 'series', 'verbal', 'spatial', 'memory'].map((a) => ({
@@ -275,91 +272,28 @@ try {
     rapportOk.includes('Profil par aptitude') && !rapportOk.includes('62 %')
   );
 
-  // ── 7. Section réservée et paiement sandbox ─────────────────────────────
+  // ── 7. Corrections et attestation, sans déblocage ─────────────────
+  // Le module de paiement a été retiré : le rapport est intégralement accessible.
+  // On vérifie donc l'absence de tout verrou, et non son ouverture.
   await cliquerTexte('Corrections', 'button[role="tab"]').catch(() => {});
-  await new Promise((r) => setTimeout(r, 600));
-  let corrections = await texteDeLaPage();
+  await new Promise((r) => setTimeout(r, 700));
+  const corrections = await texteDeLaPage();
   verifier(
-    'La section réservée est annoncée honnêtement',
-    corrections.includes('Section réservée'),
+    'Aucune section réservée ne subsiste',
+    !corrections.includes('Section réservée')
   );
   verifier(
-    'Le prix du déblocage est affiché',
-    corrections.includes('500') && corrections.includes('XOF')
-  );
-
-  await cliquerTexte('Débloquer pour');
-  await new Promise((r) => setTimeout(r, 1500));
-  verifier(
-    'Le paiement ouvre une référence',
-    page.url().includes('/paiement/'),
-    page.url().split('/paiement/')[1]?.slice(0, 24) ?? ''
-  );
-
-  let paiement = await texteDeLaPage();
-  verifier('L’état initial est « en attente »', paiement.includes('Confirmez le paiement'));
-  verifier(
-    'Le guichet de test est annoncé comme tel',
-    paiement.includes('Guichet de test') && paiement.includes('Aucun franc n’est déplacé')
-  );
-  await page.screenshot({ path: `${SORTIE}/parcours-3-paiement-attente.png` });
-
-  // Cas « signature absente » : doit être rejeté.
-  await cliquerTexte('Envoyer sans signature');
-  await new Promise((r) => setTimeout(r, 900));
-  paiement = await texteDeLaPage();
-  verifier(
-    'Un webhook sans signature est rejeté',
-    paiement.includes('rejeté') || paiement.includes('Signature absente : rejeté')
+    'Aucun prix ne subsiste dans le rapport',
+    !/500\s*XOF/.test(corrections)
   );
   verifier(
-    'Le rejet ne débloque rien : la transaction reste en attente',
-    paiement.includes('Confirmez le paiement')
+    'Les corrections affichent les bonnes réponses',
+    corrections.includes('bonne réponse') || corrections.includes('réussie') || corrections.includes('manquée')
   );
-
-  // Cas « succès ».
-  await cliquerTexte('Simuler un succès');
-  await new Promise((r) => setTimeout(r, 1400));
-  paiement = await texteDeLaPage();
-  verifier('Le succès est confirmé à l’écran', paiement.includes('Paiement confirmé'));
-  await page.screenshot({ path: `${SORTIE}/parcours-4-paiement-reussi.png` });
-
-  // Cas « rejeu » : ne doit rien créditer une seconde fois.
-  await cliquerTexte('Rejouer le webhook');
-  await new Promise((r) => setTimeout(r, 900));
-  paiement = await texteDeLaPage();
-  verifier(
-    'Le rejeu du webhook est appliqué sans second crédit',
-    paiement.includes('Paiement confirmé')
-  );
-
-  // ── 8. Le rapport payé est débloqué ─────────────────────────────────────
-  await cliquerTexte('Voir mon rapport');
-  await new Promise((r) => setTimeout(r, 1200));
-  const tableauApres = await texteDeLaPage();
-  verifier(
-    'Le tableau de bord montre la passation',
-    tableauApres.includes('dernière évaluation')
-  );
-
-  // On revient sur LE rapport qui a été payé, et non sur la dernière passation.
-  // Ouvrir « Voir le rapport » depuis le tableau de bord menait à la passation au
-  // score refusé, qui n'a pas d'onglets : la vérification passait alors sans rien
-  // vérifier. Faux positif corrigé.
-  await page.goto(`${BASE}/rapport/${referenceRapport}`, { waitUntil: 'networkidle2' });
-  await new Promise((r) => setTimeout(r, 1500));
-  await cliquerTexte('Corrections', 'button[role="tab"]').catch(() => {});
-  await new Promise((r) => setTimeout(r, 800));
-  corrections = await texteDeLaPage();
-  verifier(
-    'Les corrections du rapport payé sont débloquées',
-    corrections.includes('Profil') && !corrections.includes('Section réservée'),
-    corrections.includes('Section réservée') ? 'toujours verrouillé' : 'accès accordé'
-  );
-  await page.screenshot({ path: `${SORTIE}/parcours-5-corrections.png`, fullPage: true });
+  await page.screenshot({ path: `${SORTIE}/parcours-3-corrections.png`, fullPage: true });
 
   await cliquerTexte('Attestation', 'button[role="tab"]').catch(() => {});
-  await new Promise((r) => setTimeout(r, 800));
+  await new Promise((r) => setTimeout(r, 700));
   const attestation = await texteDeLaPage();
   verifier(
     'L’attestation est accessible',
@@ -367,20 +301,22 @@ try {
     attestation.includes('Attestation de passation') ? '' : attestation.slice(0, 80)
   );
   verifier(
-    'L’attestation ne se dit plus « officielle »',
+    'L’attestation ne se dit pas « officielle »',
     !/officiel/i.test(attestation)
   );
-  await page.screenshot({ path: `${SORTIE}/parcours-6-attestation.png`, fullPage: true });
+  await page.screenshot({ path: `${SORTIE}/parcours-4-attestation.png`, fullPage: true });
 
-  // ── 9. Transactions ────────────────────────────────────────────────────
-  await page.goto(`${BASE}/transactions`, { waitUntil: 'networkidle2' });
-  await new Promise((r) => setTimeout(r, 900));
-  const transactions = await texteDeLaPage();
-  verifier(
-    'La transaction figure dans l’historique',
-    transactions.includes('500') && transactions.includes('Réussi')
-  );
-  await page.screenshot({ path: `${SORTIE}/parcours-7-transactions.png` });
+  // ── 8. Aucune route de paiement ne répond plus ───────────────────
+  for (const chemin of ['/paiement/ref-inexistante', '/transactions']) {
+    await page.goto(`${BASE}${chemin}`, { waitUntil: 'networkidle2' });
+    await new Promise((r) => setTimeout(r, 600));
+    const texte = await texteDeLaPage();
+    verifier(
+      `La route ${chemin} n'existe plus`,
+      texte.includes('Cette page n’existe pas') || page.url().includes('/connexion'),
+      page.url().replace(BASE, '')
+    );
+  }
 
   // ── 10. Déconnexion ───────────────────────────────────────────────────
   await page.goto(`${BASE}/parametres`, { waitUntil: 'networkidle2' });

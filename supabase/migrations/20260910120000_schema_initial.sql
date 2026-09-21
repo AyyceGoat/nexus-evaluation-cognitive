@@ -87,78 +87,6 @@ create table public.iq_responses (
 
 create index iq_responses_item on public.iq_responses (item_id);
 
--- ── Droits d'accès ─────────────────────────────────────────────────────────
--- Le déblocage du rapport. Vérifié serveur, jamais lu depuis le client.
-
-create table public.entitlements (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users (id) on delete cascade,
-  -- Le déblocage porte sur une passation précise, pas sur le compte : c'est un
-  -- achat unique par rapport, conformément au modèle économique retenu.
-  session_id  uuid not null references public.iq_sessions (id) on delete cascade,
-  granted_at  timestamptz not null default now(),
-  -- Transaction qui l'a ouvert. Nullable pour un octroi manuel (geste commercial).
-  transaction_id uuid,
-
-  constraint un_droit_par_passation unique (user_id, session_id)
-);
-
-comment on table public.entitlements is
-  'Un droit d''accès au rapport complet. Seul un webhook vérifié ou un administrateur en crée.';
-
--- ── Transactions ───────────────────────────────────────────────────────────
--- Détail du flux et des six cas traités : voir la migration de la Phase 5.
-
--- `processing` est l'état intermédiaire du verrou d'idempotence : le webhook fait
--- passer la ligne de `pending` à `processing` par un UPDATE conditionnel, et un rejeu
--- ne trouve plus de ligne au statut attendu. Le verrou est ainsi atomique côté base,
--- et non une lecture suivie d'une écriture.
-create type public.payment_status as enum (
-  'pending', 'processing', 'succeeded', 'failed', 'expired', 'rejected'
-);
-
-create table public.transactions (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users (id) on delete cascade,
-  session_id  uuid references public.iq_sessions (id) on delete set null,
-
-  -- Référence générée serveur. L'unicité est ce qui rend le webhook idempotent :
-  -- un rejeu ne peut pas créditer deux fois.
-  reference   text not null unique,
-
-  provider    text not null,
-  -- Montant en unité mineure. Le franc CFA n'a pas de subdivision, donc 500 = 500 F.
-  -- Fixé serveur d'après le plan, jamais lu depuis le client.
-  amount      integer not null,
-  currency    char(3) not null default 'XOF',
-  status      public.payment_status not null default 'pending',
-
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now(),
-  -- Au-delà, la transaction passe à `expired` et sa référence devient inutilisable.
-  expires_at  timestamptz not null default now() + interval '30 minutes',
-
-  failure_reason text,
-
-  constraint montant_positif check (amount > 0)
-);
-
-create index transactions_user_date on public.transactions (user_id, created_at desc);
-create index transactions_statut on public.transactions (status) where status = 'pending';
-
--- Journal des transitions d'état. Horodaté, en ajout seul.
-create table public.transaction_events (
-  id             bigint generated always as identity primary key,
-  transaction_id uuid not null references public.transactions (id) on delete cascade,
-  from_status    public.payment_status,
-  to_status      public.payment_status not null,
-  source         text not null,
-  detail         jsonb,
-  occurred_at    timestamptz not null default now()
-);
-
-create index transaction_events_tx on public.transaction_events (transaction_id, occurred_at);
-
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY
 --
@@ -166,12 +94,9 @@ create index transaction_events_tx on public.transaction_events (transaction_id,
 -- données » est écrite ici une fois, et non dans chaque écran.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-alter table public.profiles           enable row level security;
-alter table public.iq_sessions        enable row level security;
-alter table public.iq_responses       enable row level security;
-alter table public.entitlements       enable row level security;
-alter table public.transactions       enable row level security;
-alter table public.transaction_events enable row level security;
+alter table public.profiles     enable row level security;
+alter table public.iq_sessions  enable row level security;
+alter table public.iq_responses enable row level security;
 
 -- Profils : lecture et mise à jour de son seul profil. Pas de suppression :
 -- elle suit celle du compte, par cascade.
@@ -207,26 +132,6 @@ create policy "reponses ajoutables sur sa passation ouverte"
     and exists (
       select 1 from public.iq_sessions s
       where s.id = session_id and s.user_id = auth.uid() and s.finished_at is null
-    )
-  );
-
--- Droits d'accès : lecture seule pour l'utilisateur. Aucune politique d'écriture,
--- donc AUCUN client ne peut s'en octroyer un. Seules les fonctions serveur, qui
--- contournent RLS via la clé de service, en créent.
-create policy "droits lisibles par leur proprietaire"
-  on public.entitlements for select using (auth.uid() = user_id);
-
--- Transactions : lecture seule. La création passe par une fonction serveur, pour que
--- le montant et le plan soient déterminés serveur et non envoyés par le client.
-create policy "transactions lisibles par leur proprietaire"
-  on public.transactions for select using (auth.uid() = user_id);
-
-create policy "evenements lisibles par le proprietaire de la transaction"
-  on public.transaction_events for select
-  using (
-    exists (
-      select 1 from public.transactions t
-      where t.id = transaction_id and t.user_id = auth.uid()
     )
   );
 
@@ -268,15 +173,11 @@ create trigger profiles_touch
   before update on public.profiles
   for each row execute function public.touch_updated_at();
 
-create trigger transactions_touch
-  before update on public.transactions
-  for each row execute function public.touch_updated_at();
-
 -- ═══════════════════════════════════════════════════════════════════════════
 -- VUES
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Ce que le dashboard lit : une passation par ligne, avec son droit d'accès résolu.
+-- Ce que le dashboard lit : une passation par ligne.
 -- `security_invoker` fait respecter les politiques RLS de l'appelant.
 create view public.v_mes_passations
 with (security_invoker = true)
@@ -291,8 +192,6 @@ select
   s.scaled_lower95,
   s.scaled_upper95,
   s.percentile,
-  s.verdict,
-  (e.id is not null) as rapport_debloque
+  s.verdict
 from public.iq_sessions s
-left join public.entitlements e on e.session_id = s.id and e.user_id = s.user_id
 where s.user_id = auth.uid();

@@ -17,7 +17,6 @@ import type { IQReport, ItemResponse, SessionRecord } from './types';
 const KEY_SESSIONS = 'nexus_iq_sessions_v2';
 const KEY_REPORTS = 'nexus_iq_reports_v2';
 const KEY_LAST_REPORT = 'nexus_iq_last_report_v2';
-const KEY_UNLOCKED = 'nexus_iq_unlocked_v2';
 
 /** Nombre de passations conservées pour le contrôle d'exposition des items. */
 const SESSION_HISTORY_LIMIT = 5;
@@ -80,21 +79,3 @@ export function getLastReport(): IQReport | null {
   return getReports().find((r) => r.sessionId === id) ?? null;
 }
 
-/**
- * Accès au rapport détaillé.
- *
- * ⚠️ Cette vérification est côté client et ne protège rien : elle sera remplacée en
- * Phase 4 par un contrôle serveur adossé à l'abonnement, seul faisant foi. Elle est
- * isolée ici pour que ce remplacement ne touche qu'un seul fichier.
- */
-export function isReportUnlocked(sessionId: string): boolean {
-  return readJson<string[]>(KEY_UNLOCKED, []).includes(sessionId);
-}
-
-export function unlockReport(sessionId: string): void {
-  const unlocked = readJson<string[]>(KEY_UNLOCKED, []);
-  if (!unlocked.includes(sessionId)) {
-    unlocked.push(sessionId);
-    writeJson(KEY_UNLOCKED, unlocked);
-  }
-}

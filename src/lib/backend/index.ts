@@ -74,8 +74,6 @@ export const backend: BackendPort = {
   cloturerPassation: delegue((p) => p.cloturerPassation),
   lireRapport: delegue((p) => p.lireRapport),
   itemsRecemmentVus: delegue((p) => p.itemsRecemmentVus),
-  rapportDebloque: delegue((p) => p.rapportDebloque),
-  listerTransactions: delegue((p) => p.listerTransactions),
 
   /**
    * Seule méthode synchrone du port : elle rend immédiatement une fonction de

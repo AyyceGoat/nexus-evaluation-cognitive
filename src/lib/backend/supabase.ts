@@ -6,7 +6,6 @@ import {
   type BackendPort,
   type PassationResume,
   type RapportStocke,
-  type Transaction,
   type Utilisateur,
 } from './types';
 
@@ -22,9 +21,7 @@ import {
  * - seule la clé « anon » est utilisée côté navigateur ; la clé de service ne doit
  *   jamais figurer dans le bundle ;
  * - le score n'est pas écrit par le client : `cloturerPassation` appelle une fonction
- *   serveur qui recalcule à partir du journal des réponses ;
- * - le déblocage du rapport est lu depuis `entitlements`, table sans aucune politique
- *   d'écriture — donc inaccessible en écriture à tout client.
+ *   serveur qui recalcule à partir du journal des réponses.
  */
 
 export function creerClientSupabase(url: string, cleAnon: string): SupabaseClient {
@@ -80,19 +77,6 @@ interface LignePassation {
   scaled_upper95: number | null;
   percentile: number | null;
   verdict: ValidityVerdict | null;
-  rapport_debloque: boolean;
-}
-
-interface LigneTransaction {
-  id: string;
-  reference: string;
-  provider: string;
-  amount: number;
-  currency: string;
-  status: Transaction['statut'];
-  created_at: string;
-  expires_at: string;
-  failure_reason: string | null;
 }
 
 export function creerBackendSupabase(client: SupabaseClient): BackendPort {
@@ -212,7 +196,6 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
         borneHaute: l.scaled_upper95,
         centile: l.percentile,
         verdict: l.verdict,
-        rapportDebloque: l.rapport_debloque,
       }));
     },
 
@@ -298,39 +281,6 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
         .returns<{ item_id: string }[]>();
 
       return reponses?.map((r) => r.item_id) ?? [];
-    },
-
-    async rapportDebloque(passationId) {
-      // Lecture de `entitlements`, table sans politique d'écriture : aucun client ne
-      // peut s'y accorder un droit.
-      const { data } = await client
-        .from('entitlements')
-        .select('id')
-        .eq('session_id', passationId)
-        .maybeSingle<{ id: string }>();
-
-      return Boolean(data);
-    },
-
-    async listerTransactions(): Promise<Transaction[]> {
-      const { data, error } = await client
-        .from('transactions')
-        .select('id, reference, provider, amount, currency, status, created_at, expires_at, failure_reason')
-        .order('created_at', { ascending: false })
-        .returns<LigneTransaction[]>();
-
-      if (error || !data) return [];
-      return data.map((l) => ({
-        id: l.id,
-        reference: l.reference,
-        fournisseur: l.provider,
-        montant: l.amount,
-        devise: l.currency,
-        statut: l.status,
-        creeeLe: l.created_at,
-        expireLe: l.expires_at,
-        motifEchec: l.failure_reason,
-      }));
     },
   };
 }

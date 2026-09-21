@@ -25,27 +25,6 @@ export interface PassationResume {
   borneHaute: number | null;
   centile: number | null;
   verdict: ValidityVerdict | null;
-  rapportDebloque: boolean;
-}
-
-export type StatutPaiement =
-  | 'pending'
-  | 'processing'
-  | 'succeeded'
-  | 'failed'
-  | 'expired'
-  | 'rejected';
-
-export interface Transaction {
-  id: string;
-  reference: string;
-  fournisseur: string;
-  montant: number;
-  devise: string;
-  statut: StatutPaiement;
-  creeeLe: string;
-  expireLe: string;
-  motifEchec: string | null;
 }
 
 /**
@@ -102,11 +81,4 @@ export interface BackendPort {
   lireRapport(passationId: string): Promise<RapportStocke | null>;
   /** Identifiants servis lors des dernières passations, pour le contrôle d'exposition. */
   itemsRecemmentVus(nombrePassations: number): Promise<string[]>;
-
-  // ── Droits d'accès ──────────────────────────────────────────────────────
-  /** Vérifié serveur. Un booléen côté client n'autorise rien. */
-  rapportDebloque(passationId: string): Promise<boolean>;
-
-  // ── Transactions ────────────────────────────────────────────────────────
-  listerTransactions(): Promise<Transaction[]>;
 }

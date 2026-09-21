@@ -53,7 +53,5 @@ export const CHEMINS = {
   tableauDeBord: '/tableau-de-bord',
   profil: '/profil',
   parametres: '/parametres',
-  transactions: '/transactions',
   rapport: (id: string) => `/rapport/${id}`,
-  paiement: (reference: string) => `/paiement/${encodeURIComponent(reference)}`,
 } as const;

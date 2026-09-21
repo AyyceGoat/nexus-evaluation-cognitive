@@ -73,7 +73,6 @@ export function TableauDeBord() {
         <ul className="flex flex-wrap gap-x-8 gap-y-3">
           {[
             [CHEMINS.profil, 'Profil'],
-            [CHEMINS.transactions, 'Transactions'],
             [CHEMINS.parametres, 'Paramètres'],
           ].map(([chemin, libelle]) => (
             <li key={chemin}>

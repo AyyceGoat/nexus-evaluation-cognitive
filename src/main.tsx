@@ -34,10 +34,8 @@ const MotDePasseOublie = lazy(() => import('./pages/auth').then((m) => ({ defaul
 const Bienvenue = lazy(() => import('./pages/Bienvenue').then((m) => ({ default: m.Bienvenue })));
 const TableauDeBord = lazy(() => import('./pages/TableauDeBord').then((m) => ({ default: m.TableauDeBord })));
 const Rapport = lazy(() => import('./pages/Rapport').then((m) => ({ default: m.Rapport })));
-const Paiement = lazy(() => import('./pages/Paiement').then((m) => ({ default: m.Paiement })));
 const Profil = lazy(() => import('./pages/compte').then((m) => ({ default: m.Profil })));
 const Parametres = lazy(() => import('./pages/compte').then((m) => ({ default: m.Parametres })));
-const Transactions = lazy(() => import('./pages/compte').then((m) => ({ default: m.Transactions })));
 const NonTrouve = lazy(() => import('./pages/compte').then((m) => ({ default: m.NonTrouve })));
 
 createRoot(document.getElementById('root')!).render(
@@ -62,16 +60,6 @@ createRoot(document.getElementById('root')!).render(
                 sans compte doit rester consultable. Le contenu réservé, lui, dépend
                 du droit d'accès vérifié côté serveur. */}
             <Route path="/rapport/:id" element={<Rapport />} />
-
-            {/* Le paiement exige un compte : c'est lui qui porte le droit d'accès. */}
-            <Route
-              path="/paiement/:reference"
-              element={
-                <RouteProtegee>
-                  <Paiement />
-                </RouteProtegee>
-              }
-            />
 
             {/* ── Authentification ────────────────────────────────────── */}
             <Route
@@ -129,14 +117,6 @@ createRoot(document.getElementById('root')!).render(
               element={
                 <RouteProtegee>
                   <Parametres />
-                </RouteProtegee>
-              }
-            />
-            <Route
-              path={CHEMINS.transactions}
-              element={
-                <RouteProtegee>
-                  <Transactions />
                 </RouteProtegee>
               }
             />

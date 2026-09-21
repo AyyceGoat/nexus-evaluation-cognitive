@@ -12,15 +12,12 @@ import type { IQItem, IQReport } from '../lib/iq/types';
 interface Charge {
   rapport: IQReport;
   items: IQItem[];
-  debloque: boolean;
 }
 
 /**
  * Rapport d'une passation, par son identifiant.
  *
- * Le droit d'accès est demandé au backend, jamais déduit côté client : c'est ce qui
- * distingue cette version de l'ancienne, où un `localStorage.setItem` suffisait à
- * tout débloquer.
+ * Le rapport est intégralement accessible : corrections et attestation comprises.
  */
 export function Rapport() {
   const { id } = useParams();
@@ -29,10 +26,7 @@ export function Rapport() {
   const etat = useAsync<Charge | null>(async () => {
     if (!id) return null;
 
-    const [stocke, debloque] = await Promise.all([
-      backend.lireRapport(id),
-      backend.rapportDebloque(id),
-    ]);
+    const stocke = await backend.lireRapport(id);
 
     // Repli sur le stockage local : une passation faite sans compte y réside, et
     // reste consultable dans le même navigateur.
@@ -44,7 +38,7 @@ export function Rapport() {
       .map((itemId) => itemsById.get(itemId))
       .filter((item): item is IQItem => Boolean(item));
 
-    return { rapport, items, debloque };
+    return { rapport, items };
   }, [id]);
 
   if (etat.statut === 'chargement') {
@@ -90,13 +84,12 @@ export function Rapport() {
     );
   }
 
-  const { rapport, items, debloque } = etat.donnees;
+  const { rapport, items } = etat.donnees;
 
   return (
     <IQResultsView
       report={rapport}
       items={items}
-      debloque={debloque}
       onRestart={() => navigate(CHEMINS.evaluation)}
     />
   );

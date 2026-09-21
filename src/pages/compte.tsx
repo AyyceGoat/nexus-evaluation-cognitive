@@ -1,12 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { backend, modeDeveloppementLocal, type Transaction } from '../lib/backend';
+import { backend } from '../lib/backend';
 import { useAuth } from '../app/auth';
-import { useAsync } from '../app/useAsync';
 import { CHEMINS } from '../app/navigation';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
-import { EmptyState, ErrorState, SkeletonListe } from '../components/ui/feedback';
 
 function Entete({ titre, sous }: { titre: string; sous: string }) {
   return (
@@ -124,104 +122,6 @@ export function Parametres() {
             déployer. En attendant, la demande se fait par courrier électronique.
           </p>
         </section>
-      </div>
-    </div>
-  );
-}
-
-/* ── Transactions ────────────────────────────────────────────────────────── */
-
-const LIBELLE_STATUT: Record<Transaction['statut'], string> = {
-  pending: 'En attente',
-  // Verrou serveur, de durée très brève. Affiché comme « en attente » plutôt que
-  // d'exposer un mot de vocabulaire interne.
-  processing: 'En attente',
-  succeeded: 'Réussi',
-  failed: 'Échoué',
-  expired: 'Expiré',
-  rejected: 'Rejeté',
-};
-
-export function Transactions() {
-  const etat = useAsync<Transaction[]>(() => backend.listerTransactions(), []);
-
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-      <Entete
-        titre="Transactions"
-        sous="Historique de vos paiements et de leur état."
-      />
-
-      <div className="mt-8">
-        {etat.statut === 'chargement' && <SkeletonListe lignes={3} />}
-
-        {etat.statut === 'erreur' && (
-          <ErrorState
-            titre="L’historique n’a pas pu être chargé"
-            action={
-              <Button variant="secondaire" onClick={etat.recharger}>
-                Réessayer
-              </Button>
-            }
-          >
-            {etat.message}
-          </ErrorState>
-        )}
-
-        {etat.statut === 'pret' && etat.donnees.length === 0 && (
-          <EmptyState
-            titre="Aucune transaction"
-            action={
-              <Link to={CHEMINS.tableauDeBord} className="inline-flex">
-                <Button variant="secondaire">Retour au tableau de bord</Button>
-              </Link>
-            }
-          >
-            {modeDeveloppementLocal
-              ? 'Le mode développement local n’enregistre les transactions que dans ce navigateur. Le paiement sandbox de la Phase 5 en créera ici.'
-              : 'Vos paiements apparaîtront ici dès le premier déblocage de rapport.'}
-          </EmptyState>
-        )}
-
-        {etat.statut === 'pret' && etat.donnees.length > 0 && (
-          <ul className="flex flex-col gap-2">
-            {etat.donnees.map((transaction) => (
-              <li
-                key={transaction.id}
-                className="flex flex-col gap-2 border border-ardoise bg-graphite p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="nombres text-petit text-craie">
-                    {transaction.montant} {transaction.devise}
-                  </span>
-                  <span className="nombres text-micro text-brume">
-                    {transaction.reference}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-1 sm:items-end">
-                  <span
-                    className={
-                      transaction.statut === 'succeeded'
-                        ? 'text-petit text-mesure'
-                        : transaction.statut === 'pending'
-                          ? 'text-petit text-brume'
-                          : 'text-petit text-alerte'
-                    }
-                  >
-                    {LIBELLE_STATUT[transaction.statut]}
-                  </span>
-                  <span className="text-micro text-brume">
-                    {new Date(transaction.creeeLe).toLocaleString('fr-FR')}
-                  </span>
-                  {transaction.motifEchec && (
-                    <span className="text-micro text-brume">{transaction.motifEchec}</span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
