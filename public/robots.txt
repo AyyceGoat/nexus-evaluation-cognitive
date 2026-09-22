@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://taupe-lily-ac2081.netlify.app/sitemap.xml
+Disallow: /tableau-de-bord
+Disallow: /profil
+Disallow: /parametres
+Disallow: /bienvenue
+Disallow: /rapport/
+Disallow: /mot-de-passe
+
+Sitemap: https://nexus-evaluation-cognitive.netlify.app/sitemap.xml

@@ -7,6 +7,7 @@
     "build": "tsc --noEmit && vite build",
     "dev": "vite",
     "genere:seed": "node scripts/genere-seed-items.mjs",
+    "genere:sitemap": "node scripts/genere-sitemap.mjs",
     "lint": "eslint . && node scripts/verifie-tokens.mjs && node scripts/verifie-seed-items.mjs",
     "preview": "vite preview",
     "test": "vitest run",
