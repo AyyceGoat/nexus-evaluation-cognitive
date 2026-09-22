@@ -203,7 +203,14 @@ export interface BackendPort {
    * composer trente-cinq questions faciles.
    */
   ouvrirPassation(longueur: number): Promise<Resultat<PassationOuverte>>;
-  enregistrerReponse(passationId: string, reponse: ReponseDonnee): Promise<Resultat>;
+  /**
+   * Enregistre toutes les réponses d'une passation, en une seule requête.
+   *
+   * Une par une, il fallait trente-cinq allers-retours : lent, et surtout fragile —
+   * un onglet fermé au mauvais moment laissait une passation à demi enregistrée,
+   * que la fonction serveur refusait ensuite de clore.
+   */
+  enregistrerReponses(passationId: string, reponses: ReponseDonnee[]): Promise<Resultat>;
   /**
    * Clôture la passation.
    *

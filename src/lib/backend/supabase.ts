@@ -206,6 +206,21 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
     return data.user?.id ?? null;
   }
 
+  /**
+   * Le corrigé d'une passation close.
+   *
+   * Fonction locale, et non méthode : la façade extrait les méthodes du port puis
+   * les appelle sans les lier, donc `this` y vaut `undefined`. Un `this.lireCorrige`
+   * levait une exception et laissait la page de rapport vide.
+   */
+  async function lireCorrigeInterne(passationId: string): Promise<CorrectionServeur[]> {
+    const { data, error } = await client.rpc('corrige_de_passation', {
+      p_session_id: passationId,
+    });
+    if (error || !data) return [];
+    return (data as LigneCorrection[]).map(versCorrection);
+  }
+
   /** Nom porté par l'attestation, si l'utilisateur en a renseigné un. */
   async function nomLegal(): Promise<string | null> {
     const uid = await idUtilisateur();
@@ -435,29 +450,26 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
     async lireCorrige(passationId): Promise<CorrectionServeur[]> {
       // Refusé par le serveur tant que la passation n'est pas close : il ne suffit
       // donc pas d'ouvrir une passation pour en obtenir les réponses.
-      const { data, error } = await client.rpc('corrige_de_passation', {
-        p_session_id: passationId,
-      });
-
-      if (error || !data) return [];
-      return (data as LigneCorrection[]).map(versCorrection);
+      return lireCorrigeInterne(passationId);
     },
 
-    async enregistrerReponse(passationId, reponse) {
+    async enregistrerReponses(passationId, reponses) {
       const uid = await idUtilisateur();
       if (!uid) return echec('Votre session a expiré. Reconnectez-vous.');
+      if (reponses.length === 0) return succes(undefined);
 
       // `correct` n'est PAS transmis : un déclencheur le calcule depuis le corrigé
       // serveur. Le privilège d'écriture sur cette colonne est d'ailleurs retiré.
-      // Insertion simple, et non `upsert` : le journal est en ajout seul, et une
-      // réponse n'est écrite qu'une fois, à la clôture.
-      const { error } = await client.from('iq_responses').insert({
-        session_id: passationId,
-        user_id: uid,
-        item_id: reponse.itemId,
-        selected_index: reponse.selectedIndex,
-        response_seconds: reponse.responseSeconds,
-      });
+      // Insertion simple, et non `upsert` : le journal est en ajout seul.
+      const { error } = await client.from('iq_responses').insert(
+        reponses.map((reponse) => ({
+          session_id: passationId,
+          user_id: uid,
+          item_id: reponse.itemId,
+          selected_index: reponse.selectedIndex,
+          response_seconds: reponse.responseSeconds,
+        }))
+      );
 
       return error ? echec(message(error)) : succes(undefined);
     },
@@ -541,7 +553,7 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
       // ni les énoncés ni les bonnes réponses.
       const [{ data: lignesQuestions }, corrections] = await Promise.all([
         client.rpc('items_de_passation', { p_session_id: passationId }),
-        this.lireCorrige(passationId),
+        lireCorrigeInterne(passationId),
       ]);
 
       return {

@@ -145,8 +145,11 @@ export function IQTestRunner() {
     setErreurCalcul(null);
 
     void (async () => {
-      for (const reponse of reponses) {
-        await backend.enregistrerReponse(passation, reponse);
+      const enregistrement = await backend.enregistrerReponses(passation, reponses);
+      if (!enregistrement.ok) {
+        setCalcul(false);
+        setErreurCalcul(enregistrement.message);
+        return;
       }
 
       const cloture = await backend.cloturerPassation(passation);

@@ -96,7 +96,7 @@ const portNonConfigure: BackendPort = {
   async ouvrirPassation() {
     return echec(MESSAGE_CONFIGURATION);
   },
-  async enregistrerReponse() {
+  async enregistrerReponses() {
     return echec(MESSAGE_CONFIGURATION);
   },
   async cloturerPassation() {
@@ -153,7 +153,7 @@ export const backend: BackendPort = {
   lireClassement: delegue((p) => p.lireClassement),
   listerPassations: delegue((p) => p.listerPassations),
   ouvrirPassation: delegue((p) => p.ouvrirPassation),
-  enregistrerReponse: delegue((p) => p.enregistrerReponse),
+  enregistrerReponses: delegue((p) => p.enregistrerReponses),
   cloturerPassation: delegue((p) => p.cloturerPassation),
   lireRapport: delegue((p) => p.lireRapport),
   lireCorrige: delegue((p) => p.lireCorrige),
