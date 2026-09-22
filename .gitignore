@@ -29,3 +29,6 @@ supabase/.temp/
 # Sorties de verification (captures, rapports Lighthouse) : reproductibles par
 # npm run verifie:rendu et npm run verifie:lighthouse.
 verification/
+
+# Dossier local de la CLI Netlify : contient l'identifiant du site lie.
+.netlify
