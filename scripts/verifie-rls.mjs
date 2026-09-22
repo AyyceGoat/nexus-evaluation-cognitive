@@ -452,6 +452,130 @@ try {
     Boolean(erreurConnexionNc),
     erreurConnexionNc ? `refus : ${erreurConnexionNc.message.slice(0, 60)}` : 'CONNEXION ACCEPTEE'
   );
+  console.log('');
+  console.log('── 9. Chaîne complète : clôture serveur et publication ───────');
+
+  // Une passation menée jusqu'au bout, par la voie normale. C'est la seule façon de
+  // vérifier la fonction serveur, et de rendre non vide le contrôle des colonnes
+  // publiées : tant que le classement est vide, ce contrôle passe sans rien prouver.
+  const { data: dixItems } = await service
+    .from('iq_items')
+    .select('id, correct_index, expected_seconds')
+    .limit(10);
+
+  const { data: passationComplete, error: erreurOuverture2 } = await clientAlice.rpc(
+    'ouvrir_passation',
+    { p_item_ids: dixItems.map((i) => i.id) }
+  );
+  verifier(
+    'Alice ouvre une seconde passation',
+    !erreurOuverture2 && typeof passationComplete === 'string',
+    erreurOuverture2?.message ?? ''
+  );
+
+  // Réponses justes, avec des durées plausibles : sous le seuil, le moteur refuserait
+  // le score pour réponses expédiées, et il aurait raison.
+  const { error: erreurLot } = await clientAlice.from('iq_responses').insert(
+    dixItems.map((item) => ({
+      session_id: passationComplete,
+      user_id: alice.id,
+      item_id: item.id,
+      selected_index: item.correct_index,
+      response_seconds: item.expected_seconds,
+    }))
+  );
+  verifier('Les dix réponses sont enregistrées', !erreurLot, erreurLot?.message.slice(0, 60) ?? '');
+
+  const { data: cloture, error: erreurCloture } = await clientAlice.functions.invoke(
+    'cloturer-passation',
+    { body: { sessionId: passationComplete } }
+  );
+  verifier(
+    'La fonction serveur clôt la passation',
+    !erreurCloture && Boolean(cloture?.resultat),
+    erreurCloture ? String(erreurCloture.message).slice(0, 70) : ''
+  );
+
+  const resultat = cloture?.resultat;
+  verifier(
+    'Le serveur a calculé un indice',
+    typeof resultat?.scaledPoint === 'number' && resultat.scaledPoint > 0,
+    `indice ${resultat?.scaledPoint}, intervalle ${resultat?.scaledLower95}–${resultat?.scaledUpper95}, verdict ${resultat?.verdict}`
+  );
+  verifier(
+    'Le serveur compte les dix bonnes réponses',
+    resultat?.correctCount === 10,
+    `${resultat?.correctCount} sur ${resultat?.itemCount}`
+  );
+  verifier(
+    'Le serveur attribue un niveau',
+    typeof resultat?.niveau === 'string' && resultat.niveau.length > 0,
+    String(resultat?.niveau)
+  );
+
+  // Un second appel ne doit ni recalculer ni republier.
+  const { data: rejeu } = await clientAlice.functions.invoke('cloturer-passation', {
+    body: { sessionId: passationComplete },
+  });
+  verifier(
+    'Un second appel ne recalcule pas',
+    rejeu?.dejaClose === true,
+    `dejaClose = ${rejeu?.dejaClose}`
+  );
+
+  // Publication : la visibilité était déjà demandée en section 6.
+  const { error: erreurPublication } = await clientAlice.rpc('definir_visibilite_classement', {
+    p_visible: true,
+    p_pseudonyme: null,
+  });
+  verifier('La publication au classement aboutit', !erreurPublication, erreurPublication?.message ?? '');
+
+  const { data: publie } = await anonyme
+    .from('v_classement')
+    .select('*')
+    .limit(5);
+
+  verifier(
+    'La ligne publiée est visible sans compte',
+    (publie ?? []).length === 1,
+    `${(publie ?? []).length} ligne(s)`
+  );
+
+  const champsPublies = publie?.[0] ? Object.keys(publie[0]) : [];
+  verifier(
+    'Les colonnes publiées ne contiennent ni user_id ni e-mail',
+    champsPublies.length > 0 &&
+      !champsPublies.includes('user_id') &&
+      !champsPublies.some((c) => c.toLowerCase().includes('email')),
+    champsPublies.join(', ')
+  );
+  verifier(
+    'Aucune valeur publiée ne contient l’adresse e-mail',
+    publie?.[0] ? !JSON.stringify(publie[0]).includes(alice.email) : false
+  );
+  verifier(
+    'Le détail par aptitude est publié',
+    Array.isArray(publie?.[0]?.aptitudes) && publie[0].aptitudes.length === 5,
+    `${publie?.[0]?.aptitudes?.length ?? 0} aptitude(s)`
+  );
+  verifier(
+    'Le score publié est celui calculé par le serveur',
+    publie?.[0]?.score === resultat?.scaledPoint,
+    `classement ${publie?.[0]?.score} / serveur ${resultat?.scaledPoint}`
+  );
+
+  // Retrait : la ligne doit disparaître.
+  await clientAlice.rpc('definir_visibilite_classement', {
+    p_visible: false,
+    p_pseudonyme: null,
+  });
+  const { data: apresRetrait } = await anonyme.from('v_classement').select('pseudonyme');
+  verifier(
+    'Le retrait supprime la ligne du classement',
+    (apresRetrait ?? []).length === 0,
+    `${(apresRetrait ?? []).length} ligne(s) restante(s)`
+  );
+
 } catch (erreur) {
   console.error('');
   console.error('INTERROMPU :', erreur instanceof Error ? erreur.message : String(erreur));
