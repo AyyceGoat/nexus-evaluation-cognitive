@@ -103,7 +103,7 @@ Puis remplir les deux lignes :
 
 ```
 VITE_SUPABASE_URL=https://xxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+VITE_SUPABASE_ANON_KEY=<collez-la-cle-anon-ici>
 ```
 
 `.env` est ignoré par Git. Vérifiable à tout moment :
@@ -202,7 +202,7 @@ autre, lire le corrigé.
 1. Ajouter temporairement la clé `service_role` dans `.env` :
 
    ```
-   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
+   SUPABASE_SERVICE_ROLE_KEY=<collez-la-cle-service_role-ici>
    ```
 
    Elle sert uniquement à créer et supprimer les comptes de test.
