@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# NEXUS — configuration Supabase
+#
+# Ce fichier ne declare QU'UNE propriete, et c'est deliberé : `supabase config
+# push` laisse inchangé tout ce que le fichier ne declare pas, mais ecrase sans
+# demander ce qu'il declare. Le modele complet ecrit par `supabase init` aurait
+# donc pu remplacer le Site URL et les Redirect URLs reglés dans le tableau de
+# bord par des valeurs de developpement local.
+#
+# Avant tout `config push`, lancer `supabase config diff` et lire le resultat.
+# ═══════════════════════════════════════════════════════════════════════════
+
+project_id = "fetnhhdtdruqqhgtxaiw"
+
+[auth]
+# Les connexions anonymes rendent possible la passation « sans compte ».
+#
+# Elles sont necessaires depuis que les questions sont servies par le serveur :
+# une passation doit avoir une session pour que les politiques RLS s'appliquent,
+# et pour que personne ne lise le corrige. L'utilisateur ne fournit toujours ni
+# adresse ni mot de passe ; un compte anonyme n'a pas d'e-mail confirme, donc il
+# ne peut pas figurer au classement.
+enable_anonymous_sign_ins = true

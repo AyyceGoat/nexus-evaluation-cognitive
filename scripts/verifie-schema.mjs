@@ -36,7 +36,14 @@ function verifier(nom, ok, detail = '') {
 
 console.log('── Tables ────────────────────────────────────────────────────');
 
-for (const table of ['profiles', 'iq_items', 'iq_sessions', 'iq_responses', 'classement']) {
+for (const table of [
+  'profiles',
+  'iq_items',
+  'iq_sessions',
+  'iq_session_items',
+  'iq_responses',
+  'classement',
+]) {
   const { error } = await service.from(table).select('*', { count: 'exact', head: true });
   verifier(`table ${table}`, !error, error ? error.message.slice(0, 60) : '');
 }
@@ -54,7 +61,31 @@ verifier(
   erreurCompte ? erreurCompte.message.slice(0, 60) : `${count} trouvés`
 );
 
-const { data: lignes } = await service.from('iq_items').select('aptitude, correct_index, param_a, param_b, param_c, expected_seconds');
+const { data: lignes } = await service
+  .from('iq_items')
+  .select(
+    'aptitude, correct_index, param_a, param_b, param_c, expected_seconds, prompt, options, visual, explanation, reasoning'
+  );
+
+if (lignes) {
+  verifier(
+    'chaque item a un énoncé',
+    lignes.every((l) => typeof l.prompt === 'string' && l.prompt.length > 0),
+    `${lignes.filter((l) => !l.prompt).length} sans énoncé`
+  );
+  verifier(
+    'chaque item est affichable (options ou rendu visuel)',
+    lignes.every((l) => l.options !== null || l.visual !== null),
+    `${lignes.filter((l) => l.options === null && l.visual === null).length} inaffichables`
+  );
+  verifier(
+    'chaque item a une explication et un raisonnement',
+    lignes.every((l) => l.explanation && Array.isArray(l.reasoning) && l.reasoning.length > 0)
+  );
+  const textuels = lignes.filter((l) => Array.isArray(l.options)).length;
+  const visuels = lignes.filter((l) => l.visual !== null).length;
+  console.log(`         ${textuels} items textuels, ${visuels} items visuels`);
+}
 
 if (lignes) {
   const parAptitude = {};
@@ -90,7 +121,9 @@ verifier('v_classement lisible sans compte', !erreurVue, erreurVue?.message.slic
 // Les fonctions doivent exister et refuser un appel anonyme : on distingue
 // « fonction absente » (PGRST202) d'un refus d'autorisation, qui est le bon signe.
 for (const [fonction, args] of [
-  ['ouvrir_passation', { p_item_ids: ['mat-01'] }],
+  ['ouvrir_passation', { p_longueur: 35 }],
+  ['items_de_passation', { p_session_id: '00000000-0000-0000-0000-000000000000' }],
+  ['corrige_de_passation', { p_session_id: '00000000-0000-0000-0000-000000000000' }],
   ['definir_pseudonyme', { p_pseudonyme: 'Sonde' }],
   ['definir_visibilite_classement', { p_visible: false, p_pseudonyme: null }],
 ]) {

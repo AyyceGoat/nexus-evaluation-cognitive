@@ -7,55 +7,37 @@
  * chose.
  *
  * Tentatives couvertes :
+ *   - lire les passations, réponses et profil d'un autre utilisateur ;
+ *   - lire le corrigé de la banque d'items, directement ou par la fonction ;
+ *   - obtenir le corrigé d'une passation encore ouverte ;
  *   - écrire un score à la main (INSERT et UPDATE sur iq_sessions) ;
  *   - s'inscrire au classement directement (INSERT, UPDATE, DELETE) ;
- *   - lire le corrigé de la banque d'items ;
- *   - lire les passations, réponses et profil d'un autre utilisateur ;
  *   - se déclarer visible au classement par un UPDATE direct du profil ;
  *   - déclarer soi-même qu'une réponse est juste ;
- *   - lire la table du classement sans passer par la vue publique.
+ *   - répondre à un item qui n'a pas été servi ;
+ *   - figurer au classement avec un compte anonyme.
  *
  * Prérequis : un fichier `.env` renseigné, avec VITE_SUPABASE_URL,
  * VITE_SUPABASE_ANON_KEY et SUPABASE_SERVICE_ROLE_KEY (cette dernière uniquement
- * pour créer et supprimer les comptes de test ; elle n'est jamais utilisée pour les
- * vérifications elles-mêmes).
+ * pour créer les comptes de test et lire le corrigé côté harnais ; elle n'est
+ * jamais utilisée pour les vérifications elles-mêmes).
  *
  * Usage : node scripts/verifie-rls.mjs
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { existsSync, readFileSync } from 'node:fs';
+import { exigerEnv } from './env.mjs';
 
 /* ── Configuration ────────────────────────────────────────────────────────── */
 
-function lireEnv() {
-  const valeurs = { ...process.env };
-  if (existsSync('.env')) {
-    for (const ligne of readFileSync('.env', 'utf8').split(/\r?\n/)) {
-      const trouve = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(ligne);
-      if (!trouve) continue;
-      const valeur = trouve[2].replace(/^["']|["']$/g, '').trim();
-      if (valeur) valeurs[trouve[1]] = valeur;
-    }
-  }
-  return valeurs;
-}
+const env = exigerEnv(
+  ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
+  'Voir docs/SUPABASE.md. La cle de service sert uniquement au harnais de test,\net ne doit jamais etre commitee.'
+);
 
-const env = lireEnv();
 const URL = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
 const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!URL || !ANON || !SERVICE) {
-  console.error('Variables manquantes. Renseignez .env :');
-  console.error('  VITE_SUPABASE_URL        ', URL ? 'ok' : 'ABSENTE');
-  console.error('  VITE_SUPABASE_ANON_KEY   ', ANON ? 'ok' : 'ABSENTE');
-  console.error('  SUPABASE_SERVICE_ROLE_KEY', SERVICE ? 'ok' : 'ABSENTE');
-  console.error('');
-  console.error('Voir docs/SUPABASE.md. La cle de service sert uniquement a creer');
-  console.error('les comptes de test, et ne doit jamais etre commitee.');
-  process.exit(2);
-}
 
 /* ── Journal ──────────────────────────────────────────────────────────────── */
 
@@ -74,7 +56,11 @@ function doitEchouer(nom, { error, data }) {
   verifier(
     nom,
     refuse,
-    error ? `refus : ${String(error.message).slice(0, 70)}` : refuse ? 'aucune ligne écrite' : 'ECRITURE ACCEPTEE'
+    error
+      ? `refus : ${String(error.message).slice(0, 70)}`
+      : refuse
+        ? 'aucune ligne écrite'
+        : 'ECRITURE ACCEPTEE'
   );
 }
 
@@ -84,7 +70,20 @@ function doitEtreVide(nom, { error, data }) {
   verifier(
     nom,
     vide,
-    error ? `refus : ${String(error.message).slice(0, 70)}` : vide ? '0 ligne' : `${data.length} LIGNES LUES`
+    error
+      ? `refus : ${String(error.message).slice(0, 70)}`
+      : vide
+        ? '0 ligne'
+        : `${data.length} LIGNES LUES`
+  );
+}
+
+/** Un appel DOIT être refusé par le serveur. */
+function appelRefuse(nom, { error }) {
+  verifier(
+    nom,
+    Boolean(error),
+    error ? `refus : ${String(error.message).slice(0, 70)}` : 'APPEL ACCEPTE'
   );
 }
 
@@ -94,16 +93,18 @@ const service = createClient(URL, SERVICE, { auth: { persistSession: false } });
 const marque = Date.now().toString(36);
 const comptes = [];
 
-async function creerCompte(role) {
+async function creerCompte(role, confirme = true) {
   const email = `rls-${role}-${marque}@nexus-test.invalid`;
   const motDePasse = `Test-${marque}-${role}!`;
   const { data, error } = await service.auth.admin.createUser({
     email,
     password: motDePasse,
-    email_confirm: true,
+    email_confirm: confirme,
     user_metadata: { display_name: `Test ${role}` },
   });
-  if (error || !data.user) throw new Error(`Création du compte ${role} impossible : ${error?.message}`);
+  if (error || !data.user) {
+    throw new Error(`Création du compte ${role} impossible : ${error?.message}`);
+  }
   comptes.push(data.user.id);
   return { id: data.user.id, email, motDePasse };
 }
@@ -124,10 +125,19 @@ async function nettoyer() {
   }
 }
 
+/** Le corrigé, lu par le harnais avec la clé de service. Aucun client ne peut. */
+async function corrigeHarnais(identifiants) {
+  const { data } = await service
+    .from('iq_items')
+    .select('id, correct_index, expected_seconds')
+    .in('id', identifiants);
+  return new Map((data ?? []).map((i) => [i.id, i]));
+}
+
 /* ── Vérifications ────────────────────────────────────────────────────────── */
 
 try {
-  console.log(`Projet : ${URL}`);
+  console.log('Projet : configure depuis .env');
   console.log('');
 
   const alice = await creerCompte('alice');
@@ -136,70 +146,135 @@ try {
   const clientBob = await clientConnecte(bob);
   const anonyme = createClient(URL, ANON, { auth: { persistSession: false } });
 
-  console.log('── 1. Chacun ne lit que ses propres données ──────────────────');
-
-  // Une passation pour Alice, par la voie normale : la fonction serveur.
-  const { data: items } = await service.from('iq_items').select('id').limit(5);
-  const identifiants = (items ?? []).map((i) => i.id);
-  if (identifiants.length < 5) {
-    throw new Error('La banque d’items est vide : appliquez la migration 20260921090100.');
-  }
-
+  // Passation d'Alice, ouverte par la voie normale : c'est le SERVEUR qui choisit
+  // les items, le client ne les désigne plus.
   const { data: passationAlice, error: erreurOuverture } = await clientAlice.rpc(
     'ouvrir_passation',
-    { p_item_ids: identifiants }
+    { p_longueur: 30 }
   );
+
+  console.log('── 1. Ouverture et lecture de ses seules données ─────────────');
+
   verifier(
-    'Alice peut ouvrir une passation par la fonction serveur',
+    'Alice ouvre une passation par la fonction serveur',
     !erreurOuverture && typeof passationAlice === 'string',
-    erreurOuverture?.message ?? String(passationAlice).slice(0, 12)
+    erreurOuverture?.message ?? ''
   );
 
   const { data: siennes } = await clientAlice
     .from('iq_sessions')
-    .select('id')
+    .select('id, item_count')
     .eq('id', passationAlice);
-  verifier('Alice lit sa propre passation', (siennes ?? []).length === 1);
+  verifier(
+    'Alice lit sa propre passation',
+    (siennes ?? []).length === 1,
+    `${siennes?.[0]?.item_count} items administrés`
+  );
+  verifier(
+    'Le serveur a servi les 30 items demandés',
+    siennes?.[0]?.item_count === 30,
+    `${siennes?.[0]?.item_count}`
+  );
 
   doitEtreVide(
     'Bob ne lit pas la passation d’Alice',
     await clientBob.from('iq_sessions').select('id').eq('id', passationAlice)
   );
-
   doitEtreVide(
     'Bob ne lit pas le profil d’Alice',
     await clientBob.from('profiles').select('id').eq('id', alice.id)
   );
-
   doitEtreVide(
     'Bob ne lit pas les réponses d’Alice',
     await clientBob.from('iq_responses').select('id').eq('user_id', alice.id)
   );
-
   doitEtreVide(
     'Un visiteur anonyme ne lit aucune passation',
     await anonyme.from('iq_sessions').select('id').limit(5)
   );
-
   doitEtreVide(
     'Un visiteur anonyme ne lit aucun profil',
     await anonyme.from('profiles').select('id').limit(5)
   );
+  const { data: siensItems } = await clientAlice
+    .from('iq_session_items')
+    .select('item_id')
+    .eq('session_id', passationAlice);
+  verifier(
+    'Alice lit les items de sa propre passation',
+    (siensItems ?? []).length === 30,
+    `${siensItems?.length} items`
+  );
+  doitEtreVide(
+    'Bob ne lit pas les items administrés à Alice',
+    await clientBob.from('iq_session_items').select('item_id').eq('session_id', passationAlice)
+  );
+  doitEtreVide(
+    'Un visiteur anonyme ne lit aucun item administré',
+    await anonyme.from('iq_session_items').select('item_id').limit(5)
+  );
 
   console.log('');
-  console.log('── 2. Le corrigé de la banque est inaccessible ───────────────');
+  console.log('── 2. Les questions servies ne portent pas le corrigé ────────');
+
+  const { data: questions, error: erreurQuestions } = await clientAlice.rpc(
+    'items_de_passation',
+    { p_session_id: passationAlice }
+  );
+
+  verifier(
+    'Alice reçoit les questions de sa passation',
+    !erreurQuestions && Array.isArray(questions) && questions.length === 30,
+    erreurQuestions?.message ?? `${questions?.length} questions`
+  );
+
+  const champsServis = questions?.[0] ? Object.keys(questions[0]).sort() : [];
+  verifier(
+    'Les questions servies ne contiennent NI correct_index, NI explication, NI raisonnement',
+    champsServis.length > 0 &&
+      !champsServis.includes('correct_index') &&
+      !champsServis.includes('explanation') &&
+      !champsServis.includes('reasoning'),
+    champsServis.join(', ')
+  );
+  verifier(
+    'Les questions servies contiennent de quoi les afficher',
+    (questions ?? []).every(
+      (q) => typeof q.prompt === 'string' && q.prompt.length > 0 && (q.options || q.visual)
+    )
+  );
+  verifier(
+    'Aucune valeur servie ne laisse fuir un indice de bonne réponse',
+    !JSON.stringify(questions ?? []).match(/correct|reponse_juste|answer/i)
+  );
 
   doitEtreVide(
-    'Alice ne lit pas la banque d’items',
+    'Alice ne lit pas la banque d’items directement',
     await clientAlice.from('iq_items').select('id, correct_index').limit(5)
   );
   doitEtreVide(
     'Un visiteur anonyme ne lit pas la banque d’items',
     await anonyme.from('iq_items').select('id, correct_index').limit(5)
   );
+  appelRefuse(
+    'Bob ne peut pas demander les questions de la passation d’Alice',
+    await clientBob.rpc('items_de_passation', { p_session_id: passationAlice })
+  );
 
   console.log('');
-  console.log('── 3. Écrire un score à la main ──────────────────────────────');
+  console.log('── 3. Le corrigé d’une passation ouverte est refusé ──────────');
+
+  appelRefuse(
+    'Alice ne peut pas obtenir le corrigé avant d’avoir terminé',
+    await clientAlice.rpc('corrige_de_passation', { p_session_id: passationAlice })
+  );
+  appelRefuse(
+    'Bob ne peut pas obtenir le corrigé d’Alice',
+    await clientBob.rpc('corrige_de_passation', { p_session_id: passationAlice })
+  );
+
+  console.log('');
+  console.log('── 4. Écrire un score à la main ──────────────────────────────');
 
   doitEchouer(
     'Alice ne peut pas créer une passation avec un score',
@@ -220,27 +295,36 @@ try {
       })
       .select('id')
   );
-
   doitEchouer(
     'Alice ne peut pas modifier le score de sa passation',
     await clientAlice
       .from('iq_sessions')
-      .update({ scaled_point: 160, niveau: 'exceptionnel', finished_at: new Date().toISOString() })
+      .update({
+        scaled_point: 160,
+        niveau: 'exceptionnel',
+        finished_at: new Date().toISOString(),
+      })
       .eq('id', passationAlice)
       .select('id')
   );
-
   doitEchouer(
-    'Alice ne peut pas modifier la passation de Bob',
+    'Bob ne peut pas modifier la passation d’Alice',
     await clientBob
       .from('iq_sessions')
       .update({ scaled_point: 160 })
       .eq('id', passationAlice)
       .select('id')
   );
+  doitEchouer(
+    'Alice ne peut pas s’ajouter des items',
+    await clientAlice
+      .from('iq_session_items')
+      .insert({ session_id: passationAlice, item_id: 'mat-01', ordre: 99 })
+      .select('item_id')
+  );
 
   console.log('');
-  console.log('── 4. Écrire directement au classement ───────────────────────');
+  console.log('── 5. Écrire directement au classement ───────────────────────');
 
   doitEchouer(
     'Alice ne peut pas s’insérer au classement',
@@ -260,22 +344,22 @@ try {
       })
       .select('user_id')
   );
-
   doitEchouer(
     'Alice ne peut pas modifier une ligne du classement',
-    await clientAlice.from('classement').update({ score: 160 }).eq('user_id', alice.id).select('user_id')
+    await clientAlice
+      .from('classement')
+      .update({ score: 160 })
+      .eq('user_id', alice.id)
+      .select('user_id')
   );
-
   doitEchouer(
     'Alice ne peut pas supprimer une ligne du classement',
     await clientAlice.from('classement').delete().neq('score', -1).select('user_id')
   );
-
   doitEtreVide(
     'Personne ne lit la table du classement directement',
     await clientAlice.from('classement').select('user_id').limit(5)
   );
-
   doitEchouer(
     'Un visiteur anonyme ne peut pas écrire au classement',
     await anonyme
@@ -295,24 +379,6 @@ try {
   );
 
   console.log('');
-  console.log('── 5. La vue publique du classement ──────────────────────────');
-
-  const { error: erreurVue } = await anonyme.from('v_classement').select('pseudonyme').limit(5);
-  verifier(
-    'Un visiteur anonyme peut lire la vue du classement',
-    !erreurVue,
-    erreurVue?.message ?? ''
-  );
-
-  const { data: colonnes } = await anonyme.from('v_classement').select('*').limit(1);
-  const champs = colonnes?.[0] ? Object.keys(colonnes[0]) : [];
-  verifier(
-    'La vue publique n’expose ni user_id ni e-mail',
-    !champs.includes('user_id') && !champs.some((c) => c.includes('email')),
-    champs.length > 0 ? champs.join(', ') : 'classement vide : colonnes non vérifiables'
-  );
-
-  console.log('');
   console.log('── 6. Consentement et pseudonyme ─────────────────────────────');
 
   doitEchouer(
@@ -323,7 +389,6 @@ try {
       .eq('id', alice.id)
       .select('id')
   );
-
   doitEchouer(
     'Alice ne peut pas écrire son pseudonyme par un UPDATE direct',
     await clientAlice
@@ -352,16 +417,18 @@ try {
     erreurVisible?.message ?? ''
   );
 
-  // Sa passation n'étant pas close, rien ne doit être publié.
-  const { data: apresVisible } = await anonyme.from('v_classement').select('pseudonyme');
+  const { data: avantCloture } = await anonyme.from('v_classement').select('pseudonyme');
   verifier(
     'Aucune ligne n’est publiée sans passation close',
-    !(apresVisible ?? []).some((l) => l.pseudonyme.startsWith('Alice')),
-    `${(apresVisible ?? []).length} ligne(s) au classement`
+    !(avantCloture ?? []).some((l) => l.pseudonyme.startsWith('Alice')),
+    `${(avantCloture ?? []).length} ligne(s) au classement`
   );
 
   console.log('');
   console.log('── 7. Déclarer soi-même qu’une réponse est juste ─────────────');
+
+  const identifiants = (questions ?? []).map((q) => q.id);
+  const corrige = await corrigeHarnais(identifiants);
 
   const { error: erreurColonne } = await clientAlice.from('iq_responses').insert({
     session_id: passationAlice,
@@ -377,28 +444,27 @@ try {
     erreurColonne ? `refus : ${erreurColonne.message.slice(0, 60)}` : 'COLONNE ACCEPTEE'
   );
 
-  // Réponse par la voie normale, sur un index volontairement faux.
-  const { data: corrige } = await service
-    .from('iq_items')
-    .select('id, correct_index')
-    .eq('id', identifiants[1])
-    .single();
-  const indexFaux = (corrige.correct_index + 1) % 5;
-
+  // Réponse volontairement fausse, par la voie normale.
+  const cible = identifiants[1];
+  const indexFaux = (corrige.get(cible).correct_index + 1) % 5;
   const { error: erreurReponse } = await clientAlice.from('iq_responses').insert({
     session_id: passationAlice,
     user_id: alice.id,
-    item_id: identifiants[1],
+    item_id: cible,
     selected_index: indexFaux,
     response_seconds: 40,
   });
-  verifier('Alice peut enregistrer une réponse sur sa passation', !erreurReponse, erreurReponse?.message ?? '');
+  verifier(
+    'Alice peut enregistrer une réponse sur sa passation',
+    !erreurReponse,
+    erreurReponse?.message ?? ''
+  );
 
   const { data: relue } = await clientAlice
     .from('iq_responses')
     .select('correct')
     .eq('session_id', passationAlice)
-    .eq('item_id', identifiants[1])
+    .eq('item_id', cible)
     .single();
   verifier(
     'Le serveur corrige lui-même : réponse fausse enregistrée comme fausse',
@@ -410,14 +476,35 @@ try {
     'Alice ne peut pas réécrire une réponse déjà donnée',
     await clientAlice
       .from('iq_responses')
-      .update({ selected_index: corrige.correct_index })
+      .update({ selected_index: corrige.get(cible).correct_index })
       .eq('session_id', passationAlice)
-      .eq('item_id', identifiants[1])
+      .eq('item_id', cible)
+      .select('id')
+  );
+
+  // Un item qui n'a PAS été servi : c'est la parade contre le choix de ses propres
+  // questions faciles.
+  const { data: horsPassation } = await service
+    .from('iq_items')
+    .select('id')
+    .not('id', 'in', `(${identifiants.map((i) => `"${i}"`).join(',')})`)
+    .limit(1);
+  doitEchouer(
+    'Alice ne peut pas répondre à un item qui ne lui a pas été servi',
+    await clientAlice
+      .from('iq_responses')
+      .insert({
+        session_id: passationAlice,
+        user_id: alice.id,
+        item_id: horsPassation?.[0]?.id,
+        selected_index: 0,
+        response_seconds: 40,
+      })
       .select('id')
   );
 
   doitEchouer(
-    'Alice ne peut pas répondre sur la passation de Bob',
+    'Bob ne peut pas répondre sur la passation d’Alice',
     await clientBob
       .from('iq_responses')
       .insert({
@@ -431,60 +518,76 @@ try {
   );
 
   console.log('');
-  console.log('── 8. Compte non confirmé ────────────────────────────────────');
+  console.log('── 8. Compte non confirmé et compte anonyme ──────────────────');
 
-  const emailNonConfirme = `rls-nonconfirme-${marque}@nexus-test.invalid`;
-  const motDePasseNonConfirme = `Test-${marque}-nc!`;
-  const { data: creation } = await service.auth.admin.createUser({
-    email: emailNonConfirme,
-    password: motDePasseNonConfirme,
-    email_confirm: false,
-  });
-  if (creation?.user) comptes.push(creation.user.id);
-
-  const clientNonConfirme = createClient(URL, ANON, { auth: { persistSession: false } });
-  const { error: erreurConnexionNc } = await clientNonConfirme.auth.signInWithPassword({
-    email: emailNonConfirme,
-    password: motDePasseNonConfirme,
+  const nonConfirme = await creerCompte('nonconfirme', false);
+  const clientNc = createClient(URL, ANON, { auth: { persistSession: false } });
+  const { error: erreurNc } = await clientNc.auth.signInWithPassword({
+    email: nonConfirme.email,
+    password: nonConfirme.motDePasse,
   });
   verifier(
     'Un compte non confirmé ne peut pas se connecter',
-    Boolean(erreurConnexionNc),
-    erreurConnexionNc ? `refus : ${erreurConnexionNc.message.slice(0, 60)}` : 'CONNEXION ACCEPTEE'
+    Boolean(erreurNc),
+    erreurNc ? `refus : ${erreurNc.message.slice(0, 60)}` : 'CONNEXION ACCEPTEE'
   );
+
+  // « Sans compte » repose désormais sur une session anonyme : sans elle, aucune
+  // politique RLS ne pourrait s'appliquer à une passation.
+  const clientAnon = createClient(URL, ANON, { auth: { persistSession: false } });
+  const { data: sessionAnon, error: erreurAnon } = await clientAnon.auth.signInAnonymously();
+  verifier(
+    'Une session anonyme peut être ouverte',
+    !erreurAnon && Boolean(sessionAnon?.user),
+    erreurAnon?.message ?? ''
+  );
+  if (sessionAnon?.user) comptes.push(sessionAnon.user.id);
+
+  const { data: passationAnon, error: erreurPassationAnon } = await clientAnon.rpc(
+    'ouvrir_passation',
+    { p_longueur: 30 }
+  );
+  verifier(
+    'Un compte anonyme peut passer l’évaluation',
+    !erreurPassationAnon && typeof passationAnon === 'string',
+    erreurPassationAnon?.message ?? ''
+  );
+
+  appelRefuse(
+    'Un compte anonyme ne peut pas figurer au classement',
+    await clientAnon.rpc('definir_visibilite_classement', {
+      p_visible: true,
+      p_pseudonyme: `Anon${marque.slice(-4)}`,
+    })
+  );
+
   console.log('');
   console.log('── 9. Chaîne complète : clôture serveur et publication ───────');
 
-  // Une passation menée jusqu'au bout, par la voie normale. C'est la seule façon de
-  // vérifier la fonction serveur, et de rendre non vide le contrôle des colonnes
-  // publiées : tant que le classement est vide, ce contrôle passe sans rien prouver.
-  const { data: dixItems } = await service
-    .from('iq_items')
-    .select('id, correct_index, expected_seconds')
-    .limit(10);
+  const { data: passationComplete } = await clientAlice.rpc('ouvrir_passation', {
+    p_longueur: 30,
+  });
+  const { data: questions2 } = await clientAlice.rpc('items_de_passation', {
+    p_session_id: passationComplete,
+  });
+  const corrige2 = await corrigeHarnais((questions2 ?? []).map((q) => q.id));
 
-  const { data: passationComplete, error: erreurOuverture2 } = await clientAlice.rpc(
-    'ouvrir_passation',
-    { p_item_ids: dixItems.map((i) => i.id) }
-  );
-  verifier(
-    'Alice ouvre une seconde passation',
-    !erreurOuverture2 && typeof passationComplete === 'string',
-    erreurOuverture2?.message ?? ''
-  );
-
-  // Réponses justes, avec des durées plausibles : sous le seuil, le moteur refuserait
-  // le score pour réponses expédiées, et il aurait raison.
+  // Réponses justes, avec des durées plausibles : sous le seuil, le moteur
+  // refuserait le score pour réponses expédiées, et il aurait raison.
   const { error: erreurLot } = await clientAlice.from('iq_responses').insert(
-    dixItems.map((item) => ({
+    (questions2 ?? []).map((q) => ({
       session_id: passationComplete,
       user_id: alice.id,
-      item_id: item.id,
-      selected_index: item.correct_index,
-      response_seconds: item.expected_seconds,
+      item_id: q.id,
+      selected_index: corrige2.get(q.id).correct_index,
+      response_seconds: corrige2.get(q.id).expected_seconds,
     }))
   );
-  verifier('Les dix réponses sont enregistrées', !erreurLot, erreurLot?.message.slice(0, 60) ?? '');
+  verifier(
+    'Les 30 réponses sont enregistrées',
+    !erreurLot,
+    erreurLot?.message.slice(0, 60) ?? ''
+  );
 
   const { data: cloture, error: erreurCloture } = await clientAlice.functions.invoke(
     'cloturer-passation',
@@ -503,8 +606,8 @@ try {
     `indice ${resultat?.scaledPoint}, intervalle ${resultat?.scaledLower95}–${resultat?.scaledUpper95}, verdict ${resultat?.verdict}`
   );
   verifier(
-    'Le serveur compte les dix bonnes réponses',
-    resultat?.correctCount === 10,
+    'Le serveur compte les 30 bonnes réponses',
+    resultat?.correctCount === 30,
     `${resultat?.correctCount} sur ${resultat?.itemCount}`
   );
   verifier(
@@ -513,7 +616,6 @@ try {
     String(resultat?.niveau)
   );
 
-  // Un second appel ne doit ni recalculer ni republier.
   const { data: rejeu } = await clientAlice.functions.invoke('cloturer-passation', {
     body: { sessionId: passationComplete },
   });
@@ -523,18 +625,46 @@ try {
     `dejaClose = ${rejeu?.dejaClose}`
   );
 
-  // Publication : la visibilité était déjà demandée en section 6.
+  // Le corrigé devient disponible, et seulement maintenant.
+  const { data: corrigeApres, error: erreurCorrigeApres } = await clientAlice.rpc(
+    'corrige_de_passation',
+    { p_session_id: passationComplete }
+  );
+  verifier(
+    'Le corrigé est servi une fois la passation close',
+    !erreurCorrigeApres && Array.isArray(corrigeApres) && corrigeApres.length === 30,
+    erreurCorrigeApres?.message ?? `${corrigeApres?.length} corrections`
+  );
+  verifier(
+    'Le corrigé contient les bonnes réponses et les explications',
+    // `every` sur un tableau vide rend `true` : sans ce contrôle de longueur,
+    // l'assertion passerait alors que rien n'a été servi.
+    Array.isArray(corrigeApres) &&
+      corrigeApres.length === 30 &&
+      corrigeApres.every(
+        (c) =>
+          typeof c.correct_index === 'number' &&
+          typeof c.explanation === 'string' &&
+          Array.isArray(c.reasoning)
+      ),
+    `${corrigeApres?.length ?? 0} corrections`
+  );
+  appelRefuse(
+    'Bob n’obtient pas le corrigé de la passation close d’Alice',
+    await clientBob.rpc('corrige_de_passation', { p_session_id: passationComplete })
+  );
+
   const { error: erreurPublication } = await clientAlice.rpc('definir_visibilite_classement', {
     p_visible: true,
     p_pseudonyme: null,
   });
-  verifier('La publication au classement aboutit', !erreurPublication, erreurPublication?.message ?? '');
+  verifier(
+    'La publication au classement aboutit',
+    !erreurPublication,
+    erreurPublication?.message ?? ''
+  );
 
-  const { data: publie } = await anonyme
-    .from('v_classement')
-    .select('*')
-    .limit(5);
-
+  const { data: publie } = await anonyme.from('v_classement').select('*').limit(5);
   verifier(
     'La ligne publiée est visible sans compte',
     (publie ?? []).length === 1,
@@ -560,11 +690,13 @@ try {
   );
   verifier(
     'Le score publié est celui calculé par le serveur',
-    publie?.[0]?.score === resultat?.scaledPoint,
+    // Comparer deux `undefined` les rend égaux : on exige un nombre des deux côtés.
+    typeof publie?.[0]?.score === 'number' &&
+      typeof resultat?.scaledPoint === 'number' &&
+      publie[0].score === resultat.scaledPoint,
     `classement ${publie?.[0]?.score} / serveur ${resultat?.scaledPoint}`
   );
 
-  // Retrait : la ligne doit disparaître.
   await clientAlice.rpc('definir_visibilite_classement', {
     p_visible: false,
     p_pseudonyme: null,
@@ -575,7 +707,6 @@ try {
     (apresRetrait ?? []).length === 0,
     `${(apresRetrait ?? []).length} ligne(s) restante(s)`
   );
-
 } catch (erreur) {
   console.error('');
   console.error('INTERROMPU :', erreur instanceof Error ? erreur.message : String(erreur));
