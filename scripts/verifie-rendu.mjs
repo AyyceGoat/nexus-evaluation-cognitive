@@ -31,6 +31,7 @@ const LARGEURS = [320, 360, 414, 768, 1024, 1440, 2560];
 const PAGES = [
   { chemin: '/', nom: 'accueil' },
   { chemin: '/evaluation', nom: 'evaluation' },
+  { chemin: '/classement', nom: 'classement' },
   { chemin: '/inscription', nom: 'inscription' },
   { chemin: '/connexion', nom: 'connexion' },
   { chemin: '/pays', nom: 'pays' },

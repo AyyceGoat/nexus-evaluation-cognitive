@@ -1,4 +1,4 @@
-import type { BackendPort } from './types';
+import { echec, type BackendPort } from './types';
 
 /**
  * Accès au backend.
@@ -31,6 +31,82 @@ export const configurationManquante = !(url && cleAnon);
 const MESSAGE_CONFIGURATION =
   'Le serveur n’est pas configuré : renseignez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.';
 
+/**
+ * Port utilisé quand la configuration manque.
+ *
+ * Il ne lève pas d'exception, et ce n'est pas de la complaisance : une façade qui
+ * jette à chaque appel produisait une erreur non rattrapée sur les neuf pages du
+ * site, y compris les pages publiques qui n'ont besoin d'aucun serveur. Constaté sur
+ * un vrai navigateur, pas déduit.
+ *
+ * Les lectures rendent donc « rien », et les actions rendent un refus **affichable**,
+ * porteur de la marche à suivre. Ce qui n'est pas simulé pour autant : `connecter`
+ * refuse, il ne laisse pas entrer.
+ */
+const portNonConfigure: BackendPort = {
+  async utilisateurCourant() {
+    return null;
+  },
+  surChangementAuth(rappel) {
+    // Personne n'est connecté, et personne ne le sera : on l'annonce une fois plutôt
+    // que de laisser les écrans en attente indéfinie.
+    rappel(null);
+    return () => {};
+  },
+  async inscrire() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async connecter() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async deconnecter() {},
+  async demanderReinitialisation() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async changerMotDePasse() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async renvoyerConfirmation() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async lireProfil() {
+    return null;
+  },
+  async majProfil() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async marquerOnboarde() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async definirPseudonyme() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async definirVisibiliteClassement() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async lireClassement() {
+    return [];
+  },
+  async listerPassations() {
+    return [];
+  },
+  async ouvrirPassation() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async enregistrerReponse() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async cloturerPassation() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
+  async lireRapport() {
+    return null;
+  },
+  async itemsRecemmentVus() {
+    return [];
+  },
+};
+
 let cache: BackendPort | null = null;
 let enCours: Promise<BackendPort> | null = null;
 
@@ -39,7 +115,10 @@ export function obtenirBackend(): Promise<BackendPort> {
   if (enCours) return enCours;
 
   enCours = (async () => {
-    if (configurationManquante) throw new Error(MESSAGE_CONFIGURATION);
+    if (configurationManquante) {
+      cache = portNonConfigure;
+      return cache;
+    }
     const { creerBackendSupabase, creerClientSupabase } = await import('./supabase');
     cache = creerBackendSupabase(creerClientSupabase(url as string, cleAnon as string));
     return cache;
@@ -85,16 +164,10 @@ export const backend: BackendPort = {
     let annule = false;
     let desabonner: (() => void) | null = null;
 
-    void obtenirBackend()
-      .then((port) => {
-        if (annule) return;
-        desabonner = port.surChangementAuth(rappel);
-      })
-      .catch(() => {
-        // Sans configuration, il n'y a pas de session à observer : on annonce
-        // « personne n'est connecté » plutôt que de laisser l'écran en attente.
-        if (!annule) rappel(null);
-      });
+    void obtenirBackend().then((port) => {
+      if (annule) return;
+      desabonner = port.surChangementAuth(rappel);
+    });
 
     return () => {
       annule = true;
