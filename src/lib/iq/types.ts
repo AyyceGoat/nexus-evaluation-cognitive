@@ -13,6 +13,16 @@ export type Aptitude = 'matrix' | 'series' | 'verbal' | 'spatial' | 'memory';
 
 export const APTITUDES: readonly Aptitude[] = ['matrix', 'series', 'verbal', 'spatial', 'memory'];
 
+/**
+ * Taille de la banque d'items.
+ *
+ * Écrite en dur, et c'est délibéré : la landing affichait ce nombre en important la
+ * banque entière, ce qui expédiait au navigateur les 120 énoncés AVEC leur corrigé,
+ * pour afficher un chiffre dans une phrase. Un test vérifie que cette constante ne
+ * s'écarte pas de la banque réelle.
+ */
+export const TAILLE_BANQUE = 120;
+
 export const APTITUDE_LABEL: Record<Aptitude, string> = {
   matrix: 'Matrices logiques',
   series: 'Séries numériques',

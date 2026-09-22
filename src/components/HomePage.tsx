@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { RobotHero } from './robot/RobotHero';
 import { Button } from './ui/Button';
 import { CHEMINS } from '../app/navigation';
-import { itemBank } from '../data/iq';
 import { DEFAULT_SESSION_LENGTH } from '../lib/iq/selection';
+import { TAILLE_BANQUE } from '../lib/iq/types';
 
 /**
  * Landing.
@@ -145,7 +145,7 @@ function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
         <p className="mesure-texte text-petit text-brume">
           L’estimation repose sur un modèle de réponse à l’item à trois paramètres, sur une
-          banque de {itemBank.length} questions. Ce n’est pas un diagnostic psychologique et
+          banque de {TAILLE_BANQUE} questions. Ce n’est pas un diagnostic psychologique et
           cela ne remplace pas un bilan conduit par un psychologue.
         </p>
       </section>

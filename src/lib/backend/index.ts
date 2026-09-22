@@ -63,6 +63,9 @@ const portNonConfigure: BackendPort = {
   async demanderReinitialisation() {
     return echec(MESSAGE_CONFIGURATION);
   },
+  async connecterAnonyme() {
+    return echec(MESSAGE_CONFIGURATION);
+  },
   async changerMotDePasse() {
     return echec(MESSAGE_CONFIGURATION);
   },
@@ -102,7 +105,7 @@ const portNonConfigure: BackendPort = {
   async lireRapport() {
     return null;
   },
-  async itemsRecemmentVus() {
+  async lireCorrige() {
     return [];
   },
 };
@@ -139,6 +142,7 @@ export const backend: BackendPort = {
   connecter: delegue((p) => p.connecter),
   deconnecter: delegue((p) => p.deconnecter),
   demanderReinitialisation: delegue((p) => p.demanderReinitialisation),
+  connecterAnonyme: delegue((p) => p.connecterAnonyme),
   changerMotDePasse: delegue((p) => p.changerMotDePasse),
   renvoyerConfirmation: delegue((p) => p.renvoyerConfirmation),
   lireProfil: delegue((p) => p.lireProfil),
@@ -152,7 +156,7 @@ export const backend: BackendPort = {
   enregistrerReponse: delegue((p) => p.enregistrerReponse),
   cloturerPassation: delegue((p) => p.cloturerPassation),
   lireRapport: delegue((p) => p.lireRapport),
-  itemsRecemmentVus: delegue((p) => p.itemsRecemmentVus),
+  lireCorrige: delegue((p) => p.lireCorrige),
 
   /**
    * Seule méthode synchrone du port : elle rend immédiatement une fonction de

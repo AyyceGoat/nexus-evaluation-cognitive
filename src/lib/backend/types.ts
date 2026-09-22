@@ -1,4 +1,5 @@
-import type { Aptitude, IQReport, ItemResponse, ValidityVerdict } from '../iq/types';
+import type { Aptitude, IQReport, ValidityVerdict } from '../iq/types';
+import type { MatrixItemData } from '../../types/matrix';
 
 export interface Utilisateur {
   id: string;
@@ -97,10 +98,55 @@ export type Resultat<T = void> =
 export const echec = (message: string): Resultat<never> => ({ ok: false, message });
 export const succes = <T>(valeur: T): Resultat<T> => ({ ok: true, valeur });
 
-/** Rapport rechargé depuis le serveur, accompagné des identifiants d'items servis. */
+/** Rapport rechargé depuis le serveur, accompagné des questions et du corrigé. */
 export interface RapportStocke {
   rapport: IQReport;
-  itemIds: string[];
+  questions: QuestionServeur[];
+  corrections: CorrectionServeur[];
+}
+
+/**
+ * Une question, telle que le serveur la sert.
+ *
+ * Ce que cette forme NE contient pas est l'essentiel : ni bonne réponse, ni
+ * explication, ni raisonnement. Le navigateur ne peut donc pas les afficher avant
+ * d'avoir répondu, ni les lire dans son propre bundle — la banque d'items n'y est
+ * plus.
+ */
+export interface QuestionServeur {
+  id: string;
+  aptitude: Aptitude;
+  prompt: string;
+  options: string[] | null;
+  visual: MatrixItemData | null;
+  expectedSeconds: number;
+}
+
+/** Le corrigé, servi seulement une fois la passation close. */
+export interface CorrectionServeur {
+  itemId: string;
+  correctIndex: number;
+  explanation: string;
+  reasoning: string[];
+}
+
+/**
+ * Ce que le navigateur transmet pour une réponse.
+ *
+ * Il n'y a délibérément pas de champ « correct » : la justesse est déterminée par
+ * un déclencheur PostgreSQL depuis le corrigé, et le privilège d'écriture sur cette
+ * colonne est retiré au client.
+ */
+export interface ReponseDonnee {
+  itemId: string;
+  selectedIndex: number;
+  responseSeconds: number;
+}
+
+/** Ce que rend l'ouverture d'une passation : son identifiant et ses questions. */
+export interface PassationOuverte {
+  passationId: string;
+  questions: QuestionServeur[];
 }
 
 export interface BackendPort {
@@ -112,6 +158,15 @@ export interface BackendPort {
   connecter(email: string, motDePasse: string): Promise<Resultat>;
   deconnecter(): Promise<void>;
   demanderReinitialisation(email: string): Promise<Resultat>;
+  /**
+   * Ouvre une session anonyme.
+   *
+   * C'est ce qui permet de passer l'évaluation « sans compte » depuis que les
+   * questions viennent du serveur : une passation doit avoir une session pour que
+   * les politiques RLS s'appliquent. L'utilisateur ne fournit ni adresse ni mot de
+   * passe, et un compte anonyme ne peut pas figurer au classement.
+   */
+  connecterAnonyme(): Promise<Resultat>;
   /** Après avoir suivi le lien de réinitialisation : choisir le nouveau mot de passe. */
   changerMotDePasse(nouveau: string): Promise<Resultat>;
   /** Renvoie le message de confirmation à une adresse restée non confirmée. */
@@ -140,8 +195,15 @@ export interface BackendPort {
 
   // ── Passations ──────────────────────────────────────────────────────────
   listerPassations(): Promise<PassationResume[]>;
-  ouvrirPassation(itemIds: string[]): Promise<Resultat<string>>;
-  enregistrerReponse(passationId: string, reponse: ItemResponse): Promise<Resultat>;
+  /**
+   * Ouvre une passation et rend ses questions.
+   *
+   * Le client ne choisit plus les items : il demande une longueur, le serveur
+   * compose la passation. Un client qui désignerait ses items pourrait se
+   * composer trente-cinq questions faciles.
+   */
+  ouvrirPassation(longueur: number): Promise<Resultat<PassationOuverte>>;
+  enregistrerReponse(passationId: string, reponse: ReponseDonnee): Promise<Resultat>;
   /**
    * Clôture la passation.
    *
@@ -150,8 +212,8 @@ export interface BackendPort {
    * que le client ne possède pas côté base. C'est ce qui empêche d'afficher un score
    * inventé au classement.
    */
-  cloturerPassation(passationId: string, items: readonly { id: string }[]): Promise<Resultat<IQReport>>;
+  cloturerPassation(passationId: string): Promise<Resultat<IQReport>>;
   lireRapport(passationId: string): Promise<RapportStocke | null>;
-  /** Identifiants servis lors des dernières passations, pour le contrôle d'exposition. */
-  itemsRecemmentVus(nombrePassations: number): Promise<string[]>;
+  /** Le corrigé d'une passation close. Refusé tant qu'elle est ouverte. */
+  lireCorrige(passationId: string): Promise<CorrectionServeur[]>;
 }

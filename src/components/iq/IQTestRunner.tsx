@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildReport } from '../../lib/iq/score';
-import { selectSession } from '../../lib/iq/selection';
-import { getRecentItemIds, recordSession, saveReport } from '../../lib/iq/storage';
 import { backend } from '../../lib/backend';
+import type { CorrectionServeur, QuestionServeur } from '../../lib/backend';
 import { useAuth } from '../../app/auth';
 import { APTITUDE_LABEL, APTITUDES } from '../../lib/iq/types';
-import type { IQItem, IQReport, ItemResponse } from '../../lib/iq/types';
+import type { IQReport } from '../../lib/iq/types';
 import { MatrixRenderer } from './MatrixRenderer';
 import { IQResultsView } from './IQResultsView';
+import { SkeletonResultat } from '../ui/feedback';
 import { ArrowLeft, ArrowRight, Clock, Play } from 'lucide-react';
 
 type Stage = 'config' | 'running' | 'done';
@@ -21,23 +20,31 @@ const LENGTHS = [
 
 export function IQTestRunner() {
   // L'évaluation reste accessible sans compte : c'est une décision produit assumée
-  // (« gratuit, sans compte »). Connecté, la passation est en plus enregistrée côté
-  // backend — c'est ce qui alimentera la recalibration de la banque d'items.
+  // (« gratuit, sans compte »). Elle s'appuie désormais sur une session anonyme,
+  // car les questions viennent du serveur et une passation doit être rattachée à
+  // quelqu'un pour que les politiques d'accès s'appliquent.
   const { utilisateur } = useAuth();
   const passationDistante = useRef<string | null>(null);
   const [stage, setStage] = useState<Stage>('config');
   const [length, setLength] = useState<number>(35);
   const [candidateName, setCandidateName] = useState('');
 
-  const [items, setItems] = useState<IQItem[]>([]);
+  // Les questions viennent du serveur, sans leur corrigé : le navigateur ne
+  // détient plus aucune bonne réponse avant la fin de la passation.
+  const [items, setItems] = useState<QuestionServeur[]>([]);
+  const [corrections, setCorrections] = useState<CorrectionServeur[]>([]);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [report, setReport] = useState<IQReport | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
+  const [demarrage, setDemarrage] = useState(false);
+  const [erreurDemarrage, setErreurDemarrage] = useState<string | null>(null);
+  const [calcul, setCalcul] = useState(false);
+  const [erreurCalcul, setErreurCalcul] = useState<string | null>(null);
+
   const timeByItem = useRef<Record<string, number>>({});
   const enteredAt = useRef<number>(Date.now());
-  const sessionStartedAt = useRef<string>('');
 
   const current = items[index];
 
@@ -63,81 +70,99 @@ export function IQTestRunner() {
     return () => clearInterval(timer);
   }, [stage, index]);
 
-  // La banque de 120 items pèse l'essentiel du chunk de cet écran, et l'écran de
-  // configuration n'en a aucun besoin. Elle est donc chargée au lancement de la
-  // passation. Mesuré : le LCP de /evaluation passait de 2,75 s en 3G simulée, parce
-  // que le titre attendait l'arrivée de données qui ne servent pas à l'afficher.
+  /**
+   * Ouvre une passation et récupère ses questions.
+   *
+   * Rien n'est choisi ici : le serveur compose la passation. Un client qui
+   * désignerait ses items pourrait se composer trente-cinq questions faciles, et
+   * son score serait alors authentiquement calculé — et authentiquement faux.
+   */
   const start = useCallback(async () => {
-    const { itemBank } = await import('../../data/iq');
-    const selected = selectSession(itemBank, {
-      count: length,
-      excludeIds: getRecentItemIds(),
-    });
+    setErreurDemarrage(null);
+    setDemarrage(true);
 
-    // Ouverte dès le départ : une passation abandonnée laisse une ligne, ce qui est
-    // une donnée utile plutôt qu'un trou.
-    passationDistante.current = null;
-    if (utilisateur) {
-      void backend
-        .ouvrirPassation(selected.map((item) => item.id))
-        .then((resultat) => {
-          if (resultat.ok) passationDistante.current = resultat.valeur;
-        });
+    // Sans compte, une session anonyme est ouverte : ni adresse, ni mot de passe.
+    if (!utilisateur) {
+      const anonyme = await backend.connecterAnonyme();
+      if (!anonyme.ok) {
+        setDemarrage(false);
+        setErreurDemarrage(anonyme.message);
+        return;
+      }
     }
 
-    setItems(selected);
+    // Le nom sert à l'attestation, et c'est le serveur qui la nomme : on l'y
+    // enregistre plutôt que de le garder dans l'état de l'écran.
+    if (candidateName.trim()) {
+      await backend.majProfil({ nomLegal: candidateName.trim() });
+    }
+
+    const ouverture = await backend.ouvrirPassation(length);
+    setDemarrage(false);
+
+    if (!ouverture.ok) {
+      setErreurDemarrage(ouverture.message);
+      return;
+    }
+
+    passationDistante.current = ouverture.valeur.passationId;
+    setItems(ouverture.valeur.questions);
+    setCorrections([]);
     setIndex(0);
     setAnswers({});
+    setReport(null);
+    setErreurCalcul(null);
     timeByItem.current = {};
     enteredAt.current = Date.now();
-    sessionStartedAt.current = new Date().toISOString();
     setStage('running');
-  }, [length, utilisateur]);
+  }, [candidateName, length, utilisateur]);
 
+  /**
+   * Clôture la passation.
+   *
+   * Le navigateur envoie les index choisis et les durées. Il n'envoie ni score, ni
+   * justesse de réponse : le serveur recalcule tout depuis son corrigé, puis rend
+   * le rapport qui fait foi.
+   */
   const finish = useCallback(() => {
     commitTime(current?.id);
 
-    const responses: ItemResponse[] = items.map((item) => {
-      const selectedIndex = answers[item.id] ?? -1;
-      return {
-        itemId: item.id,
-        selectedIndex,
-        correct: selectedIndex === item.correctIndex,
-        responseSeconds: Math.round(timeByItem.current[item.id] ?? 0),
-      };
-    });
-
-    const sessionId = `iq_${Date.now().toString(36)}`;
-    const built = buildReport({
-      sessionId,
-      candidateName,
-      items,
-      responses,
-    });
-
-    recordSession(sessionId, sessionStartedAt.current, responses);
-    saveReport(built);
-    setReport(built);
-    setStage('done');
-
-    // Persistance distante quand un compte existe.
-    //
-    // Le rapport calculé ci-dessus n'est qu'un affichage immédiat : il n'est jamais
-    // transmis au serveur. La fonction serveur recalcule tout depuis les réponses
-    // enregistrées et son propre corrigé, puis son résultat REMPLACE celui-ci — y
-    // compris s'il est moins flatteur. C'est lui qui fait foi et lui seul qui peut
-    // paraître au classement.
-    const distante = passationDistante.current;
-    if (utilisateur && distante) {
-      void (async () => {
-        for (const reponse of responses) {
-          await backend.enregistrerReponse(distante, reponse);
-        }
-        const cloture = await backend.cloturerPassation(distante, items);
-        if (cloture.ok) setReport(cloture.valeur);
-      })();
+    const passation = passationDistante.current;
+    if (!passation) {
+      setErreurCalcul('La passation a été perdue. Reprenez l’évaluation.');
+      setStage('done');
+      return;
     }
-  }, [answers, candidateName, commitTime, current?.id, items, utilisateur]);
+
+    const reponses = items.map((question) => ({
+      itemId: question.id,
+      selectedIndex: answers[question.id] ?? -1,
+      responseSeconds: Math.round(timeByItem.current[question.id] ?? 0),
+    }));
+
+    setStage('done');
+    setCalcul(true);
+    setErreurCalcul(null);
+
+    void (async () => {
+      for (const reponse of reponses) {
+        await backend.enregistrerReponse(passation, reponse);
+      }
+
+      const cloture = await backend.cloturerPassation(passation);
+      if (!cloture.ok) {
+        setCalcul(false);
+        setErreurCalcul(cloture.message);
+        return;
+      }
+
+      // Le corrigé n'est servi qu'une fois la passation close : c'est seulement
+      // maintenant que le navigateur peut afficher les bonnes réponses.
+      setCorrections(await backend.lireCorrige(passation));
+      setReport(cloture.valeur);
+      setCalcul(false);
+    })();
+  }, [answers, commitTime, current?.id, items]);
 
   const goTo = useCallback(
     (next: number) => {
@@ -226,11 +251,18 @@ export function IQTestRunner() {
         <button
           type="button"
           onClick={() => void start()}
-          className="w-full sm:w-auto px-8 py-3.5 rounded-1 bg-mesure text-noir font-semibold text-sm inline-flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
+          disabled={demarrage}
+          className="w-full sm:w-auto px-8 py-3.5 rounded-1 bg-mesure text-noir font-semibold text-sm inline-flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure disabled:opacity-60"
         >
           <Play className="w-4 h-4" aria-hidden="true" />
-          Commencer l’évaluation
+          {demarrage ? 'Préparation des questions…' : 'Commencer l’évaluation'}
         </button>
+
+        {erreurDemarrage && (
+          <p role="alert" className="mt-4 text-petit text-alerte">
+            {erreurDemarrage}
+          </p>
+        )}
       </div>
     );
   }
@@ -345,17 +377,51 @@ export function IQTestRunner() {
   }
 
   // ── Résultats ─────────────────────────────────────────────────────────────
-  if (stage === 'done' && report) {
-    return (
-      <IQResultsView
-        report={report}
-        items={items}
-        onRestart={() => {
-          setReport(null);
-          setStage('config');
-        }}
-      />
-    );
+  if (stage === 'done') {
+    if (calcul) {
+      return (
+        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6" role="status" aria-live="polite">
+          <p className="text-petit text-brume">
+            Calcul du résultat par le serveur. Vos réponses sont enregistrées.
+          </p>
+          <div className="mt-8">
+            <SkeletonResultat />
+          </div>
+        </div>
+      );
+    }
+
+    if (erreurCalcul) {
+      return (
+        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+          <h1 className="text-t2 text-craie">Le résultat n’a pas pu être calculé</h1>
+          <p role="alert" className="mesure-texte mt-4 text-petit text-alerte">
+            {erreurCalcul}
+          </p>
+          <button
+            type="button"
+            onClick={() => setStage('config')}
+            className="mt-8 min-h-11 rounded-1 border border-ardoise/50 px-6 text-petit font-semibold text-brume hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
+          >
+            Reprendre l’évaluation
+          </button>
+        </div>
+      );
+    }
+
+    if (report) {
+      return (
+        <IQResultsView
+          report={report}
+          questions={items}
+          corrections={corrections}
+          onRestart={() => {
+            setReport(null);
+            setStage('config');
+          }}
+        />
+      );
+    }
   }
 
   return null;

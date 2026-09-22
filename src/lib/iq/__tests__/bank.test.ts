@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { itemBank } from '../../../data/iq';
+import { TAILLE_BANQUE } from '../types';
 import { OPTIONS_PER_ITEM } from '../../../data/iq/_builders';
 import { APTITUDES } from '../types';
 import type { Aptitude, DesignDifficulty } from '../types';
@@ -96,5 +97,14 @@ describe('répartition des aptitudes', () => {
     for (const item of itemBank) {
       expect(known.has(item.aptitude), `item ${item.id}`).toBe(true);
     }
+  });
+});
+
+describe('taille annoncée de la banque', () => {
+  it('correspond à la banque réelle', () => {
+    // La landing affiche TAILLE_BANQUE sans importer la banque, pour ne pas
+    // expédier le corrigé au navigateur. Ce test est ce qui empêche le chiffre
+    // affiché de mentir.
+    expect(TAILLE_BANQUE).toBe(itemBank.length);
   });
 });

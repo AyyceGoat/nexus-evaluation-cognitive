@@ -1,21 +1,19 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { backend } from '../lib/backend';
-import { itemsById } from '../data/iq';
-import { getReports } from '../lib/iq/storage';
+import type { RapportStocke } from '../lib/backend';
 import { useAsync } from '../app/useAsync';
 import { CHEMINS } from '../app/navigation';
 import { IQResultsView } from '../components/iq/IQResultsView';
 import { Button } from '../components/ui/Button';
 import { EmptyState, ErrorState, SkeletonResultat } from '../components/ui/feedback';
-import type { IQItem, IQReport } from '../lib/iq/types';
-
-interface Charge {
-  rapport: IQReport;
-  items: IQItem[];
-}
 
 /**
  * Rapport d'une passation, par son identifiant.
+ *
+ * Tout vient du serveur : le résultat, les énoncés et le corrigé. Il n'y a plus de
+ * repli sur le stockage du navigateur, et c'est volontaire — un rapport lu dans
+ * `localStorage` pouvait être réécrit à la main, et le navigateur ne détient de
+ * toute façon plus les énoncés.
  *
  * Le rapport est intégralement accessible : corrections et attestation comprises.
  */
@@ -23,22 +21,9 @@ export function Rapport() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const etat = useAsync<Charge | null>(async () => {
+  const etat = useAsync<RapportStocke | null>(async () => {
     if (!id) return null;
-
-    const stocke = await backend.lireRapport(id);
-
-    // Repli sur le stockage local : une passation faite sans compte y réside, et
-    // reste consultable dans le même navigateur.
-    const rapport = stocke?.rapport ?? getReports().find((r) => r.sessionId === id) ?? null;
-    if (!rapport) return null;
-
-    const identifiants = stocke?.itemIds ?? rapport.responses.map((r) => r.itemId);
-    const items = identifiants
-      .map((itemId) => itemsById.get(itemId))
-      .filter((item): item is IQItem => Boolean(item));
-
-    return { rapport, items };
+    return backend.lireRapport(id);
   }, [id]);
 
   if (etat.statut === 'chargement') {
@@ -84,12 +69,13 @@ export function Rapport() {
     );
   }
 
-  const { rapport, items } = etat.donnees;
+  const { rapport, questions, corrections } = etat.donnees;
 
   return (
     <IQResultsView
       report={rapport}
-      items={items}
+      questions={questions}
+      corrections={corrections}
       onRestart={() => navigate(CHEMINS.evaluation)}
     />
   );

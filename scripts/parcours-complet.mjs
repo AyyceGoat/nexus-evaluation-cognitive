@@ -319,59 +319,81 @@ try {
     rapport.includes('Repasser l’évaluation')
   );
 
-  // ── 6 bis. Un rapport exploitable, pour atteindre les sections réservées ──
+  // ── 6 bis. Une passation réussie, pour atteindre corrections et attestation ──
   //
-  // Répondre juste demanderait de connaître les réponses : le script ne les a pas.
-  // On dépose donc un rapport de test dans le stockage local — celui-là même que
-  // l'application écrit — puis on ouvre son URL. Ce n'est pas une simulation du
-  // produit : le rapport traverse le vrai écran de restitution.
-  const referenceRapport = 'iq_parcours_test';
-  await page.evaluate((id) => {
-    const aptitudes = ['matrix', 'series', 'verbal', 'spatial', 'memory'].map((a) => ({
-      aptitude: a,
-      label: a,
-      description: '',
-      estimate: { theta: 0.3, standardError: 0.6, itemCount: 7 },
-      scaled: { point: 104, lower95: 86, upper95: 122 },
-      correctCount: 4,
-      itemCount: 7,
-      radarValue: 62,
-    }));
-    const rapport = {
-      sessionId: id,
-      createdAt: new Date().toISOString(),
-      candidateName: 'Kouassi Yao',
-      overall: { theta: 0.4, standardError: 0.31, itemCount: 35 },
-      scaled: { point: 106, lower95: 97, upper95: 115 },
-      percentile: 66,
-      norm: { source: 'prior', populationSize: 0, label: 'sur une distribution théorique de référence' },
-      aptitudes,
-      strengths: [],
-      weaknesses: [],
-      validity: {
-        verdict: 'ok',
-        aberrantCount: 0,
-        aberrantItemIds: [],
-        correctCount: 22,
-        expectedByChance: 7,
-        aboveChanceP: 0.0001,
-        message: null,
-      },
-      totalSeconds: 1500,
-      itemCount: 35,
-      correctCount: 22,
-      responses: [],
-    };
-    localStorage.setItem('nexus_iq_reports_v2', JSON.stringify([rapport]));
-  }, referenceRapport);
+  // L'ancienne version déposait un rapport fabriqué dans le stockage du navigateur.
+  // Ce mécanisme a disparu : le rapport vient désormais du serveur, et le
+  // navigateur ne détient plus les énoncés. On passe donc une VRAIE évaluation, en
+  // lisant le corrigé avec la clé de service — ce que fait le harnais, jamais le
+  // produit.
+  await page.goto(`${BASE}/evaluation`, { waitUntil: 'networkidle2' });
+  await new Promise((r) => setTimeout(r, 800));
+  await cliquerTexte('Commencer');
+  await new Promise((r) => setTimeout(r, 3000));
 
-  await page.goto(`${BASE}/rapport/${referenceRapport}`, { waitUntil: 'networkidle2' });
-  await new Promise((r) => setTimeout(r, 1200));
-  const rapportOk = await texteDeLaPage();
-  verifier('Un rapport exploitable affiche son indice', rapportOk.includes('106'));
+  // La passation ouverte est la plus récente de ce compte.
+  const { data: passations } = await service
+    .from('iq_sessions')
+    .select('id')
+    .is('finished_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1);
+
+  const passationReussie = passations?.[0]?.id;
+  verifier('Une passation a été ouverte côté serveur', Boolean(passationReussie));
+
+  const { data: itemsServis } = await service
+    .from('iq_session_items')
+    .select('item_id, ordre')
+    .eq('session_id', passationReussie)
+    .order('ordre');
+
+  const { data: corriges } = await service
+    .from('iq_items')
+    .select('id, correct_index')
+    .in('id', (itemsServis ?? []).map((i) => i.item_id));
+
+  const bonneReponse = new Map((corriges ?? []).map((c) => [c.id, c.correct_index]));
+
+  // On répond juste à chaque question, dans l'ordre servi.
+  let justes = 0;
+  for (const servi of itemsServis ?? []) {
+    const index = bonneReponse.get(servi.item_id);
+    const clique = await page.evaluate((i) => {
+      const options = [...document.querySelectorAll('button[aria-pressed]')];
+      const visuelles = [...document.querySelectorAll('button')].filter((b) =>
+        /^Option \d/.test((b.textContent ?? '').trim())
+      );
+      const cibles = options.length > 0 ? options : visuelles;
+      if (!cibles[i]) return false;
+      cibles[i].click();
+      return true;
+    }, index);
+    if (clique) justes++;
+
+    await page.evaluate(() => {
+      const suivant = [...document.querySelectorAll('button')].find((b) =>
+        /Suivant|Terminer/i.test(b.textContent ?? '')
+      );
+      if (suivant && !suivant.disabled) suivant.click();
+    });
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
   verifier(
-    'L’intervalle de confiance est affiché à côté du chiffre',
-    rapportOk.includes('97') && rapportOk.includes('115')
+    'Toutes les questions ont reçu la bonne réponse',
+    justes === (itemsServis ?? []).length,
+    `${justes} sur ${itemsServis?.length}`
+  );
+
+  // Le serveur calcule : l'écran attend son résultat.
+  await new Promise((r) => setTimeout(r, 6000));
+  const rapportOk = await texteDeLaPage();
+
+  verifier(
+    'Le rapport affiche un indice calculé par le serveur',
+    /Indice estimé/.test(rapportOk) && !rapportOk.includes('Aucun score ne peut'),
+    rapportOk.includes('Aucun score ne peut') ? 'score refusé' : ''
   );
   verifier(
     'La population de référence du centile est nommée',
@@ -381,6 +403,7 @@ try {
     'Le profil par aptitude n’affiche aucun sous-score chiffré',
     rapportOk.includes('Profil par aptitude') && !rapportOk.includes('62 %')
   );
+  await page.screenshot({ path: `${SORTIE}/parcours-2-rapport-reussi.png`, fullPage: true });
 
   // ── 7. Corrections et attestation, sans déblocage ─────────────────
   // Le module de paiement a été retiré : le rapport est intégralement accessible.

@@ -4,22 +4,37 @@ import { IntervalBar } from './IntervalBar';
 import { IQCertificate } from './IQCertificate';
 import { MatrixRenderer } from './MatrixRenderer';
 import { APTITUDE_LABEL } from '../../lib/iq/types';
-import type { IQItem, IQReport } from '../../lib/iq/types';
+import type { IQReport } from '../../lib/iq/types';
+import type { CorrectionServeur, QuestionServeur } from '../../lib/backend';
 import { AlertTriangle, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 interface IQResultsViewProps {
   report: IQReport;
-  items: readonly IQItem[];
+  /** Les énoncés, servis par le serveur : ils ne portent aucune bonne réponse. */
+  questions: readonly QuestionServeur[];
+  /**
+   * Le corrigé, servi séparément et seulement une fois la passation close.
+   *
+   * Vide tant qu'il n'a pas été récupéré : l'écran affiche alors les questions sans
+   * leurs corrections, plutôt que d'attendre.
+   */
+  corrections: readonly CorrectionServeur[];
   onRestart: () => void;
 }
 
 type Tab = 'profil' | 'corrections' | 'attestation';
 
-export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) {
+export function IQResultsView({
+  report,
+  questions,
+  corrections,
+  onRestart,
+}: IQResultsViewProps) {
   const [tab, setTab] = useState<Tab>('profil');
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const itemsById = new Map(items.map((item) => [item.id, item]));
+  const itemsById = new Map(questions.map((question) => [question.id, question]));
+  const corrigeById = new Map(corrections.map((c) => [c.itemId, c]));
   const interpretable = report.validity.verdict !== 'not_interpretable';
 
   // ── Profil inexploitable : on n'affiche aucun score ────────────────────────
@@ -136,6 +151,7 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
             {report.responses.map((response, position) => {
               const item = itemsById.get(response.itemId);
               if (!item) return null;
+              const corrige = corrigeById.get(response.itemId);
               const open = expanded === item.id;
 
               return (
@@ -175,8 +191,8 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                         <MatrixRenderer
                           matrixData={item.visual}
                           selectedOptionIndex={response.selectedIndex}
-                          showCorrect
-                          correctOptionIndex={item.correctIndex}
+                          showCorrect={corrige !== undefined}
+                          correctOptionIndex={corrige?.correctIndex ?? -1}
                           disabled
                         />
                       )}
@@ -184,7 +200,7 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                       {item.options && (
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {item.options.map((option, optionIndex) => {
-                            const isCorrect = optionIndex === item.correctIndex;
+                            const isCorrect = optionIndex === corrige?.correctIndex;
                             const isChosen = optionIndex === response.selectedIndex;
                             return (
                               <li
@@ -208,14 +224,18 @@ export function IQResultsView({ report, items, onRestart }: IQResultsViewProps) 
                         </ul>
                       )}
 
-                      <div className="p-4 rounded-1 bg-ardoise/40 border border-ardoise/40">
-                        <p className="text-sm text-craie mb-2">{item.explanation}</p>
-                        <ol className="space-y-1 text-xs text-brume list-decimal list-inside">
-                          {item.reasoning.map((step) => (
-                            <li key={step}>{step}</li>
-                          ))}
-                        </ol>
-                      </div>
+                      {/* L'explication vient du corrigé, servi séparément et
+                          seulement une fois la passation close. */}
+                      {corrige && (
+                        <div className="p-4 rounded-1 bg-ardoise/40 border border-ardoise/40">
+                          <p className="text-sm text-craie mb-2">{corrige.explanation}</p>
+                          <ol className="space-y-1 text-xs text-brume list-decimal list-inside">
+                            {corrige.reasoning.map((step) => (
+                              <li key={step}>{step}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
                     </div>
                   )}
                 </li>

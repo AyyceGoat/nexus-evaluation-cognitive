@@ -5,10 +5,14 @@ import {
   echec,
   succes,
   type BackendPort,
+  type CorrectionServeur,
   type EntreeClassement,
   type Niveau,
+  type PassationOuverte,
   type PassationResume,
+  type QuestionServeur,
   type RapportStocke,
+  type Resultat,
   type Utilisateur,
 } from './types';
 
@@ -101,6 +105,39 @@ interface LignePassation {
   verdict: ValidityVerdict | null;
   niveau: Niveau | null;
 }
+
+interface LigneQuestion {
+  id: string;
+  aptitude: QuestionServeur['aptitude'];
+  prompt: string;
+  options: string[] | null;
+  visual: QuestionServeur['visual'];
+  expected_seconds: number;
+  ordre: number;
+}
+
+interface LigneCorrection {
+  item_id: string;
+  correct_index: number;
+  explanation: string;
+  reasoning: string[] | null;
+}
+
+const versQuestion = (l: LigneQuestion): QuestionServeur => ({
+  id: l.id,
+  aptitude: l.aptitude,
+  prompt: l.prompt,
+  options: l.options,
+  visual: l.visual,
+  expectedSeconds: l.expected_seconds,
+});
+
+const versCorrection = (l: LigneCorrection): CorrectionServeur => ({
+  itemId: l.item_id,
+  correctIndex: l.correct_index,
+  explanation: l.explanation,
+  reasoning: l.reasoning ?? [],
+});
 
 interface LigneClassement {
   rang: number;
@@ -214,6 +251,14 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
         email: email.trim(),
         password: motDePasse,
       });
+      return error ? echec(message(error)) : succes(undefined);
+    },
+
+    async connecterAnonyme() {
+      // Aucune adresse, aucun mot de passe : c'est ce qui préserve la passation
+      // « sans compte ». La session n'en est pas moins réelle, donc les politiques
+      // RLS s'appliquent et le corrigé reste hors de portée.
+      const { error } = await client.auth.signInAnonymously();
       return error ? echec(message(error)) : succes(undefined);
     },
 
@@ -362,13 +407,40 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
       })) satisfies PassationResume[];
     },
 
-    async ouvrirPassation(itemIds) {
-      // Passe par une fonction serveur : il n'existe aucune politique d'INSERT sur
-      // `iq_sessions`, précisément pour qu'un client ne puisse pas créer une
-      // passation en y glissant déjà un score.
-      const { data, error } = await client.rpc('ouvrir_passation', { p_item_ids: itemIds });
-      if (error || typeof data !== 'string') return echec(message(error));
-      return succes(data);
+    async ouvrirPassation(longueur): Promise<Resultat<PassationOuverte>> {
+      // Deux appels serveur, et aucun choix laissé au client : il demande une
+      // longueur, le serveur compose la passation puis sert les énoncés. Aucune
+      // politique d'INSERT n'existe sur `iq_sessions`, donc cette voie est la seule.
+      const { data: passationId, error } = await client.rpc('ouvrir_passation', {
+        p_longueur: longueur,
+      });
+      if (error || typeof passationId !== 'string') return echec(message(error));
+
+      // `rpc` type son retour comme une valeur unique : une fonction qui rend
+      // plusieurs lignes demande une conversion explicite.
+      const { data: brutes, error: erreurQuestions } = await client.rpc('items_de_passation', {
+        p_session_id: passationId,
+      });
+      const lignes = (brutes ?? []) as LigneQuestion[];
+
+      if (erreurQuestions || lignes.length === 0) {
+        return echec(
+          'Les questions n’ont pas pu être chargées. Vérifiez votre connexion, puis réessayez.'
+        );
+      }
+
+      return succes({ passationId, questions: lignes.map(versQuestion) });
+    },
+
+    async lireCorrige(passationId): Promise<CorrectionServeur[]> {
+      // Refusé par le serveur tant que la passation n'est pas close : il ne suffit
+      // donc pas d'ouvrir une passation pour en obtenir les réponses.
+      const { data, error } = await client.rpc('corrige_de_passation', {
+        p_session_id: passationId,
+      });
+
+      if (error || !data) return [];
+      return (data as LigneCorrection[]).map(versCorrection);
     },
 
     async enregistrerReponse(passationId, reponse) {
@@ -390,9 +462,7 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
       return error ? echec(message(error)) : succes(undefined);
     },
 
-    async cloturerPassation(passationId, _items) {
-      void _items;
-
+    async cloturerPassation(passationId) {
       const { data, error } = await client.functions.invoke<{
         resultat: LigneResultat | null;
       }>('cloturer-passation', { body: { sessionId: passationId } });
@@ -467,32 +537,18 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
         responseSeconds: Number(l.response_seconds),
       }));
 
+      // Questions et corrigé viennent du serveur : le navigateur ne détient plus
+      // ni les énoncés ni les bonnes réponses.
+      const [{ data: lignesQuestions }, corrections] = await Promise.all([
+        client.rpc('items_de_passation', { p_session_id: passationId }),
+        this.lireCorrige(passationId),
+      ]);
+
       return {
         rapport: assemblerRapport(versResultatServeur(passation), reponses, await nomLegal()),
-        itemIds: reponses.map((r) => r.itemId),
+        questions: ((lignesQuestions ?? []) as LigneQuestion[]).map(versQuestion),
+        corrections,
       };
-    },
-
-    async itemsRecemmentVus(nombrePassations) {
-      const { data } = await client
-        .from('iq_sessions')
-        .select('id')
-        .order('started_at', { ascending: false })
-        .limit(nombrePassations)
-        .returns<{ id: string }[]>();
-
-      if (!data?.length) return [];
-
-      const { data: reponses } = await client
-        .from('iq_responses')
-        .select('item_id')
-        .in(
-          'session_id',
-          data.map((s) => s.id)
-        )
-        .returns<{ item_id: string }[]>();
-
-      return reponses?.map((r) => r.item_id) ?? [];
     },
   };
 }
