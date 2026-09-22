@@ -1,8 +1,9 @@
 /**
  * Parcours de bout en bout, dans un vrai navigateur.
  *
- * Inscription → onboarding → tableau de bord → évaluation complète → rapport →
- * corrections et attestation, puis déconnexion.
+ * Inscription sans session → refus d’un compte non confirmé → connexion →
+ * onboarding → tableau de bord → évaluation complète → rapport recalculé par le
+ * serveur → corrections et attestation → classement public → déconnexion.
  *
  * Ce script clique réellement : il ne vérifie pas que le code compile, il vérifie que
  * le produit fonctionne.
@@ -11,10 +12,75 @@
  */
 
 import { launch } from 'puppeteer-core';
-import { existsSync, mkdirSync } from 'node:fs';
+import { createClient } from '@supabase/supabase-js';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 
 const BASE = process.argv[2] ?? 'http://localhost:4245';
 const SORTIE = 'verification';
+
+/* ── Configuration ─────────────────────────────────────────────────────────
+ *
+ * Le parcours exige un vrai projet Supabase : il n'existe plus de mode local, et
+ * c'est voulu. L'authentification etant a confirmation obligatoire, un script ne
+ * peut pas cliquer un lien recu par courriel : le compte de test est donc cree
+ * deja confirme par l'API d'administration, seule voie honnete. La cle de service
+ * ne sert qu'a cela, et les comptes sont supprimes a la fin.
+ */
+
+function lireEnv() {
+  const valeurs = { ...process.env };
+  if (existsSync('.env')) {
+    for (const ligne of readFileSync('.env', 'utf8').split(/\r?\n/)) {
+      const trouve = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(ligne);
+      if (!trouve) continue;
+      const valeur = trouve[2].replace(/^["']|["']$/g, '').trim();
+      if (valeur) valeurs[trouve[1]] = valeur;
+    }
+  }
+  return valeurs;
+}
+
+const env = lireEnv();
+if (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_ANON_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Ce parcours exige un projet Supabase configure dans .env :');
+  console.error('  VITE_SUPABASE_URL        ', env.VITE_SUPABASE_URL ? 'ok' : 'ABSENTE');
+  console.error('  VITE_SUPABASE_ANON_KEY   ', env.VITE_SUPABASE_ANON_KEY ? 'ok' : 'ABSENTE');
+  console.error('  SUPABASE_SERVICE_ROLE_KEY', env.SUPABASE_SERVICE_ROLE_KEY ? 'ok' : 'ABSENTE');
+  console.error('');
+  console.error('Voir docs/SUPABASE.md. Le script s arrete plutot que de faire');
+  console.error('croire a un parcours reussi sans avoir rien verifie.');
+  process.exit(2);
+}
+
+const service = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+const marque = Date.now().toString(36);
+const COMPTE = {
+  email: `parcours-${marque}@nexus-test.invalid`,
+  motDePasse: `Parcours-${marque}!`,
+  nom: 'Kouassi Yao',
+};
+const aSupprimer = [];
+
+async function creerCompteConfirme() {
+  const { data, error } = await service.auth.admin.createUser({
+    email: COMPTE.email,
+    password: COMPTE.motDePasse,
+    email_confirm: true,
+    user_metadata: { display_name: COMPTE.nom },
+  });
+  if (error || !data.user) throw new Error(`Compte de test impossible : ${error?.message}`);
+  aSupprimer.push(data.user.id);
+  return data.user.id;
+}
+
+async function supprimerComptes() {
+  for (const id of aSupprimer) {
+    await service.auth.admin.deleteUser(id).catch(() => {});
+  }
+}
 
 const CHEMINS_CHROME = [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -71,14 +137,16 @@ const texteDeLaPage = () =>
   page.evaluate(() => document.getElementById('root')?.innerText ?? '');
 
 try {
-  // ── 1. Le bandeau de mode local est-il bien affiché ? ────────────────────
+  // ── 1. Aucun mode simulé, et la landing s'affiche ───────────────────────
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle2' });
   const accueil = await texteDeLaPage();
   verifier(
-    'Le bandeau de mode développement local est affiché',
-    accueil.includes('Mode développement local')
+    'Aucun bandeau de mode simulé ni de configuration manquante',
+    !accueil.includes('Mode développement local') && !accueil.includes('Serveur non configuré'),
+    accueil.includes('Serveur non configuré') ? 'la configuration n a pas atteint le bundle' : ''
   );
   verifier('La landing affiche son titre', accueil.includes('Mesurez vos aptitudes'));
+  verifier('Le classement figure dans la navigation', accueil.includes('Classement'));
 
   // ── 2. Route protégée : redirection et retour à la page demandée ─────────
   await page.goto(`${BASE}/tableau-de-bord`, { waitUntil: 'networkidle2' });
@@ -94,19 +162,61 @@ try {
     connexion.includes('Vous y serez ramené')
   );
 
-  // ── 3. Inscription ──────────────────────────────────────────────────────
+  // ── 3a. L'inscription n'ouvre AUCUNE session ────────────────────────────
+  // Comportement exigé : la confirmation d'adresse est obligatoire.
   await page.goto(`${BASE}/inscription`, { waitUntil: 'networkidle2' });
   const champs = await page.$$('input');
   verifier('Le formulaire d’inscription a trois champs', champs.length === 3, `${champs.length}`);
 
-  await champs[0].type('Kouassi Yao');
-  await champs[1].type('kouassi@exemple.ci');
-  await champs[2].type('motdepasse-solide');
+  const emailJetable = `inscription-${marque}@nexus-test.invalid`;
+  await champs[0].type('Essai Inscription');
+  await champs[1].type(emailJetable);
+  await champs[2].type(`Essai-${marque}!`);
   await cliquerTexte('Créer mon compte', 'button[type="submit"]');
-  await new Promise((r) => setTimeout(r, 1200));
+  await new Promise((r) => setTimeout(r, 3000));
+
+  const apresInscription = await texteDeLaPage();
+  verifier(
+    'L’inscription demande de confirmer l’adresse, sans ouvrir de session',
+    apresInscription.includes('Vérifiez votre boîte mail') && !page.url().includes('/bienvenue'),
+    page.url().replace(BASE, '')
+  );
+  verifier(
+    'Le renvoi du lien de confirmation est proposé',
+    apresInscription.includes('Renvoyer le lien de confirmation')
+  );
+  await page.screenshot({ path: `${SORTIE}/parcours-0-confirmation.png` });
+
+  // Ce compte reste non confirmé : on le supprime à la fin comme les autres.
+  const { data: liste } = await service.auth.admin.listUsers({ perPage: 200 });
+  const jetable = (liste?.users ?? []).find((u) => u.email === emailJetable);
+  if (jetable) aSupprimer.push(jetable.id);
+
+  // ── 3b. Un compte non confirmé ne peut pas se connecter ────────────────
+  await page.goto(`${BASE}/connexion`, { waitUntil: 'networkidle2' });
+  let entrees = await page.$$('input');
+  await entrees[0].type(emailJetable);
+  await entrees[1].type(`Essai-${marque}!`);
+  await cliquerTexte('Se connecter', 'button[type="submit"]');
+  await new Promise((r) => setTimeout(r, 3000));
+  const refus = await texteDeLaPage();
+  verifier(
+    'Un compte non confirmé se voit refuser la connexion',
+    refus.includes('Confirmez votre adresse') && !page.url().includes('/tableau-de-bord'),
+    page.url().replace(BASE, '')
+  );
+
+  // ── 3c. Connexion avec un compte confirmé ──────────────────────────────
+  await creerCompteConfirme();
+  await page.goto(`${BASE}/connexion`, { waitUntil: 'networkidle2' });
+  entrees = await page.$$('input');
+  await entrees[0].type(COMPTE.email);
+  await entrees[1].type(COMPTE.motDePasse);
+  await cliquerTexte('Se connecter', 'button[type="submit"]');
+  await new Promise((r) => setTimeout(r, 3500));
 
   verifier(
-    'L’inscription mène à l’onboarding',
+    'Un compte confirmé se connecte et arrive sur l’onboarding',
     page.url().includes('/bienvenue'),
     page.url().replace(BASE, '')
   );
@@ -318,6 +428,84 @@ try {
     );
   }
 
+  // ── 9. Classement public : consentement, publication, retrait ──────────
+  const pseudonyme = `Kouassi${marque.slice(-4)}`;
+
+  await page.goto(`${BASE}/parametres`, { waitUntil: 'networkidle2' });
+  await new Promise((r) => setTimeout(r, 900));
+  const parametres = await texteDeLaPage();
+  verifier(
+    'Les paramètres annoncent ce qui sera publié',
+    parametres.includes('votre pseudonyme') && parametres.includes('Ni votre'),
+  );
+  verifier(
+    'Par défaut, on ne figure pas au classement',
+    parametres.includes('vous n’y figurez pas')
+  );
+
+  const champPseudo = await page.$('input');
+  if (!champPseudo) throw new Error('Champ de pseudonyme introuvable.');
+  await champPseudo.type(pseudonyme);
+  await cliquerTexte('Enregistrer le pseudonyme');
+  await new Promise((r) => setTimeout(r, 1800));
+  verifier(
+    'Le pseudonyme est enregistré',
+    (await texteDeLaPage()).includes('Pseudonyme enregistré')
+  );
+
+  await cliquerTexte('Figurer au classement');
+  await new Promise((r) => setTimeout(r, 2200));
+  const apresConsentement = await texteDeLaPage();
+  verifier(
+    'Le consentement au classement est pris en compte',
+    apresConsentement.includes('vous figurez au classement'),
+    apresConsentement.includes('Confirmez') ? 'refus : adresse non confirmée' : ''
+  );
+  await page.screenshot({ path: `${SORTIE}/parcours-5-parametres.png`, fullPage: true });
+
+  // Le script a répondu au hasard : la passation a été refusée, donc rien ne doit
+  // être publié. Publier un profil indiscernable du hasard reviendrait à classer
+  // du bruit — c'est précisément ce qu'on vérifie ici.
+  const contexteAnonyme = await navigateur.createBrowserContext();
+  const pageAnonyme = await contexteAnonyme.newPage();
+  await pageAnonyme.setViewport({ width: 1280, height: 1000 });
+  await pageAnonyme.goto(`${BASE}/classement`, { waitUntil: 'networkidle2' });
+  await new Promise((r) => setTimeout(r, 1500));
+  const classementAnonyme = await pageAnonyme.evaluate(
+    () => document.getElementById('root')?.innerText ?? ''
+  );
+
+  verifier(
+    'Le classement est consultable sans compte',
+    classementAnonyme.includes('Classement') && !pageAnonyme.url().includes('/connexion'),
+    pageAnonyme.url().replace(BASE, '')
+  );
+  verifier(
+    'Le classement ne publie pas une passation au score refusé',
+    !classementAnonyme.includes(pseudonyme),
+    classementAnonyme.includes(pseudonyme) ? 'PSEUDONYME PUBLIE A TORT' : ''
+  );
+  verifier(
+    'Aucune adresse e-mail ne paraît au classement',
+    !classementAnonyme.includes('@nexus-test.invalid') && !classementAnonyme.includes(COMPTE.email)
+  );
+  verifier(
+    'Le classement dit que les intervalles se recouvrent',
+    classementAnonyme.includes('recouvrent')
+  );
+  await pageAnonyme.screenshot({ path: `${SORTIE}/parcours-6-classement.png`, fullPage: true });
+  await contexteAnonyme.close();
+
+  // Retrait : la ligne doit disparaître, et l'état revenir en arrière.
+  await page.goto(`${BASE}/parametres`, { waitUntil: 'networkidle2' });
+  await new Promise((r) => setTimeout(r, 1200));
+  await cliquerTexte('Me retirer du classement');
+  await new Promise((r) => setTimeout(r, 2000));
+  verifier(
+    'Le retrait du classement est pris en compte',
+    (await texteDeLaPage()).includes('vous n’y figurez pas')
+  );
+
   // ── 10. Déconnexion ───────────────────────────────────────────────────
   await page.goto(`${BASE}/parametres`, { waitUntil: 'networkidle2' });
   await new Promise((r) => setTimeout(r, 600));
@@ -335,6 +523,7 @@ try {
   await page.screenshot({ path: `${SORTIE}/parcours-erreur.png` }).catch(() => {});
 } finally {
   await navigateur.close();
+  await supprimerComptes();
 }
 
 console.log('\n=== ERREURS DE CONSOLE PENDANT LE PARCOURS ===');
