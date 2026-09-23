@@ -47,7 +47,7 @@ function QuizSection() {
               >
                 <span className="text-xl sm:text-2xl mb-1 block">{mode.icon}</span>
                 <p className="font-semibold text-xs sm:text-sm">{mode.name}</p>
-                <p className="text-micro sm:text-xs text-brume mt-0.5 line-clamp-2">{mode.description}</p>
+                <p className="text-petit text-texte mt-0.5 line-clamp-2">{mode.description}</p>
               </button>
             ))}
           </div>

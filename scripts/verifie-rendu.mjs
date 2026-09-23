@@ -26,7 +26,7 @@ const CHEMINS_CHROME = [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
 ];
 
-const LARGEURS = [320, 360, 414, 768, 1024, 1440, 2560];
+const LARGEURS = [320, 360, 390, 414, 768, 1024, 1440, 2560];
 
 const PAGES = [
   { chemin: '/', nom: 'accueil' },
@@ -126,6 +126,57 @@ try {
     if (largeur === 360) {
       await page.goto(BASE + '/', { waitUntil: 'networkidle2' });
       await page.screenshot({ path: `${SORTIE}/accueil-360.png`, fullPage: true });
+    }
+    await page.close();
+  }
+
+  // ── Tailles de texte réellement calculées, à 360 et 390 px ─────────────
+  //
+  // Le reproche « les écrits sont minuscules » ne se vérifie pas en relisant une
+  // feuille de style : une classe peut être écrasée, une taille en dur peut
+  // subsister. On mesure donc ce que le navigateur applique.
+  resultats.typographie = [];
+  for (const largeur of [360, 390]) {
+    const page = await navigateur.newPage();
+    await page.setViewport({ width: largeur, height: 800, deviceScaleFactor: 2, isMobile: true });
+
+    for (const { chemin, nom } of PAGES) {
+      await page.goto(BASE + chemin, { waitUntil: 'networkidle2', timeout: 30000 });
+      await new Promise((r) => setTimeout(r, 500));
+
+      const mesure = await page.evaluate(() => {
+        const trop = [];
+        let minimum = 999;
+        let compte = 0;
+
+        for (const element of document.querySelectorAll('body *')) {
+          // Seuls les éléments qui portent du texte directement nous intéressent.
+          const propre = [...element.childNodes]
+            .filter((n) => n.nodeType === 3)
+            .map((n) => n.textContent.trim())
+            .join('');
+          if (propre.length < 2) continue;
+
+          const style = getComputedStyle(element);
+          if (style.display === 'none' || style.visibility === 'hidden') continue;
+          // Le texte réservé aux lecteurs d'écran n'est pas lu à l'œil.
+          if (style.clipPath === 'inset(50%)' || style.clip === 'rect(0px, 0px, 0px, 0px)') continue;
+
+          const taille = parseFloat(style.fontSize);
+          compte++;
+          if (taille < minimum) minimum = taille;
+          if (taille < 14) {
+            trop.push({
+              balise: element.tagName.toLowerCase(),
+              taille: Math.round(taille * 10) / 10,
+              texte: propre.slice(0, 40),
+            });
+          }
+        }
+        return { minimum: minimum === 999 ? null : minimum, compte, trop: trop.slice(0, 6) };
+      });
+
+      resultats.typographie.push({ largeur, nom, ...mesure });
     }
     await page.close();
   }

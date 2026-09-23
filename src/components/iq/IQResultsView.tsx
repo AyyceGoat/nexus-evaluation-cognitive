@@ -98,13 +98,13 @@ export function IQResultsView({
         )}
 
         {report.validity.message && (
-          <p className="mt-4 border-l-2 border-mesure pl-4 text-micro text-brume leading-relaxed">
+          <p className="mt-4 border-l-2 border-mesure pl-4 text-petit text-texte leading-relaxed">
             {report.validity.message}
           </p>
         )}
       </section>
 
-      <p className="text-xs text-brume leading-relaxed mb-8 max-w-prose">
+      <p className="text-petit text-texte leading-relaxed mb-8 max-w-prose">
         Cette évaluation est un outil d’entraînement et d’auto-évaluation. Elle ne constitue pas
         un diagnostic psychologique et ne remplace pas un bilan conduit par un psychologue.
       </p>

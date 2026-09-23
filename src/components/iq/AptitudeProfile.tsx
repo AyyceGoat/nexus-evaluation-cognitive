@@ -98,7 +98,7 @@ export function AptitudeProfile({ aptitudes, forces, faiblesses }: AptitudeProfi
         <span>Plus fort</span>
       </div>
 
-      <p className="mesure-texte border-l-2 border-ardoise pl-4 text-micro text-brume">
+      <p className="mesure-texte border-l-2 border-ardoise pl-4 text-petit text-texte">
         Le détail par aptitude est indicatif. Seul l’indice global est estimé avec une
         précision suffisante pour être lu comme un nombre.
       </p>

@@ -110,7 +110,7 @@ export function IQCertificate({ report }: IQCertificateProps) {
           ))}
         </ul>
 
-        <div className="pt-6 border-t border-ardoise/40 text-micro text-brume leading-relaxed max-w-lg mx-auto space-y-2">
+        <div className="pt-6 border-t border-ardoise/40 text-petit text-texte leading-relaxed max-w-lg mx-auto space-y-2">
           <p>
             Résultat exprimé sur une échelle de moyenne 100
             {hasMeasuredNorm ? ` et d’écart-type ${SCALE_SD} mesuré sur ${report.norm.populationSize} passations` : ''}.

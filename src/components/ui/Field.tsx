@@ -32,7 +32,7 @@ export function Field({ label, erreur, aide, className, ...rest }: FieldProps) {
       </label>
 
       {aide && (
-        <p id={idAide} className="text-micro text-brume">
+        <p id={idAide} className="text-petit text-texte">
           {aide}
         </p>
       )}

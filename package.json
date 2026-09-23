@@ -18,6 +18,7 @@
     "verifie:design": "node scripts/verifie-tokens.mjs",
     "verifie:fps": "node scripts/mesure-fps.mjs",
     "verifie:lighthouse": "node scripts/lighthouse.mjs",
+    "verifie:mobile": "node scripts/verifie-mobile.mjs",
     "verifie:parcours": "node scripts/parcours-complet.mjs",
     "verifie:rendu": "node scripts/verifie-rendu.mjs",
     "verifie:rls": "node scripts/verifie-rls.mjs",

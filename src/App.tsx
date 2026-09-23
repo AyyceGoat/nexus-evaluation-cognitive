@@ -238,7 +238,7 @@ function BandeauConfiguration() {
 
   return (
     <div role="status" className="border-b border-alerte bg-noir">
-      <p className="mx-auto max-w-6xl px-4 py-2 text-micro text-brume sm:px-6">
+      <p className="mx-auto max-w-6xl px-4 py-2 text-petit text-texte sm:px-6">
         <span className="text-alerte">Serveur non configuré.</span> Les comptes,
         l’enregistrement des passations et le classement sont indisponibles. Renseignez{' '}
         <span className="nombres">VITE_SUPABASE_URL</span> et{' '}

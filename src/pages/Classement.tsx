@@ -36,7 +36,7 @@ export function Classement() {
         pseudonyme paraît.
       </p>
 
-      <p className="mesure-texte mt-5 border-l-2 border-ardoise pl-4 text-micro text-brume">
+      <p className="mesure-texte mt-5 border-l-2 border-ardoise pl-4 text-petit text-texte">
         L’ordre suit l’indice estimé. Les intervalles de confiance se recouvrent
         largement d’une ligne à l’autre : ce tableau range des mesures, il ne départage
         pas deux personnes voisines.
