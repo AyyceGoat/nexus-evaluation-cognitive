@@ -60,6 +60,9 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
 - Connexion, mot de passe oublié, choix d'un nouveau mot de passe par lien reçu,
   déconnexion.
 - Chaque compte conserve l'historique de ses passations et sa progression.
+- L'évaluation reste accessible sans compte, via une session anonyme : ni adresse, ni
+  mot de passe. Un compte anonyme ne peut pas figurer au classement, faute d'adresse
+  confirmée.
 - Parcours d'accueil en trois étapes, profil, paramètres.
 - Routes protégées avec retour à la page initialement demandée après connexion.
 - Persistance sur PostgreSQL via Supabase, avec **Row Level Security activée sur
@@ -78,8 +81,18 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
   verdict de validité et le détail par aptitude à partir du journal des réponses et
   d'une table de corrigé qu'aucun client ne peut lire. La justesse de chaque réponse
   est déterminée par un déclencheur PostgreSQL.
+- **Les questions sont servies par le serveur, sans leur corrigé.** Le serveur choisit
+  les items d'une passation — un par niveau de difficulté et par aptitude, en écartant
+  ceux des trois dernières passations — puis sert les énoncés et les options. La bonne
+  réponse, l'explication et le raisonnement ne sont servis qu'une fois la passation
+  close, et seulement à son propriétaire. Le corrigé ne figure donc pas dans le bundle
+  JavaScript, et une réponse n'est acceptée que sur un item réellement administré.
 - Aucune politique d'écriture n'existe sur la table du classement ni sur celle des
   passations : une tentative d'insertion directe est refusée par la base.
+- Les règles d'accès ne sont pas seulement écrites, elles sont **éprouvées** :
+  `npm run verifie:rls` se connecte comme un visiteur ordinaire et tente chaque
+  violation — écrire un score, s'inscrire au classement, lire le corrigé, lire les
+  données d'autrui.
 
 ### Bases de connaissances
 
@@ -175,6 +188,8 @@ détaillés pas à pas dans [`docs/SUPABASE.md`](docs/SUPABASE.md).
 | `npm run verifie:parcours` | Parcours de bout en bout dans un navigateur |
 | `npm run verifie:rls` | Tente de violer chaque règle d'accès sur un vrai projet Supabase |
 | `npm run verifie:seed` | Vérifie que le corrigé serveur correspond à la banque d'items |
+| `npm run verifie:schema` | Contrôle le schéma appliqué : tables, banque, fonctions serveur |
+| `npm run verifie:auth` | Vérifie le chargement différé de l'authentification |
 
 ---
 
