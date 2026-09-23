@@ -70,7 +70,6 @@ export default function Scene({ cible, capacites, visible, modelUrl }: Props) {
       // Rien n'est rendu sans invalidation explicite : c'est `Cadence` qui décide.
       frameloop="demand"
       dpr={capacites.dpr}
-      shadows={capacites.ombres}
       camera={{ position: [0, 0.03, 3.2], fov: 32 }}
       gl={{
         antialias: !capacites.tactile,
@@ -92,12 +91,11 @@ export default function Scene({ cible, capacites, visible, modelUrl }: Props) {
       <ambientLight intensity={0.9} color={couleurs.craie} />
 
       {/* Clé, en haut à droite : c'est elle qui sculpte le volume. */}
-      <directionalLight
-        position={[2.6, 3.2, 3.4]}
-        intensity={2.6}
-        color={couleurs.craie}
-        castShadow={capacites.ombres}
-      />
+      {/* Pas d'ombre portée, et ce n'est pas un compromis : aucun maillage du
+          buste ne porte `receiveShadow`, donc la carte d'ombres était calculée à
+          chaque image pour un résultat invisible. Une passe de rendu entière,
+          dépensée pour rien. */}
+      <directionalLight position={[2.6, 3.2, 3.4]} intensity={2.6} color={couleurs.craie} />
 
       {/* Appoint frontal doux, pour que la visière et la mâchoire se lisent. */}
       <directionalLight position={[-1.6, 0.4, 3.2]} intensity={1.4} color={couleurs.craie} />

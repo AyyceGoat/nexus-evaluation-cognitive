@@ -97,7 +97,7 @@ describe('ressort de la tête', () => {
 
   it('suit une cible mobile avec un retard perceptible mais borné', () => {
     // Balayage de souris réaliste : environ 2 rad/s. La pulsation propre du ressort
-    // vaut √60 ≈ 7,75 rad/s, donc le suivi est net à cette vitesse tout en gardant du
+    // vaut √210 ≈ 14,5 rad/s, donc le suivi est net à cette vitesse tout en gardant du
     // retard — c'est le comportement voulu.
     const retard = retardMaximalPour(2);
 
@@ -120,5 +120,79 @@ describe('ressort de la tête', () => {
     // Même au plus rapide, la tête reste dans l'amplitude de la cible : elle traîne,
     // elle ne part pas ailleurs.
     expect(rapide).toBeLessThan(1);
+  });
+});
+
+/**
+ * Temps de stabilisation : la preuve que le suivi ne traîne plus.
+ *
+ * Elle est déterministe, donc indépendante du matériel. C'est important : la mesure
+ * d'images par seconde, elle, est plafonnée par le rendu logiciel de la machine de
+ * développement et ne dit rien du ressenti sur un vrai GPU. Le reproche « il traîne »
+ * portait sur CE chiffre, et celui-là se calcule.
+ */
+describe('franchise du suivi', () => {
+  /** Instant où la position entre définitivement dans ±2 % de la cible. */
+  function tempsDeStabilisation(cible: number): number {
+    const dt = 1 / 60;
+    let etat: EtatRessort = { position: 0, vitesse: 0 };
+    let dernierEcart = 0;
+
+    for (let i = 0; i < 60 * 5; i++) {
+      etat = avancerRessort(etat, cible, dt);
+      if (Math.abs(etat.position - cible) > 0.02 * Math.abs(cible)) {
+        dernierEcart = (i + 1) * dt;
+      }
+    }
+    return dernierEcart;
+  }
+
+  it('se stabilise en moins de 0,45 s', () => {
+    const t = tempsDeStabilisation(1);
+    // Le réglage précédent (k = 60, c = 11) mettait 0,73 s : perceptible comme un
+    // retard, et c'est ce que l'utilisateur a signalé.
+    expect(t).toBeLessThan(0.45);
+    // Mais pas instantané : sans inertie, le mouvement n'a plus rien de vivant.
+    expect(t).toBeGreaterThan(0.12);
+  });
+
+  it('est nettement plus franc que l’ancien réglage', () => {
+    const dt = 1 / 60;
+    const stabiliser = (k: number, c: number) => {
+      let etat: EtatRessort = { position: 0, vitesse: 0 };
+      let dernier = 0;
+      for (let i = 0; i < 60 * 5; i++) {
+        etat = avancerRessort(etat, 1, dt, k, c);
+        if (Math.abs(etat.position - 1) > 0.02) dernier = (i + 1) * dt;
+      }
+      return dernier;
+    };
+
+    const ancien = stabiliser(60, 11);
+    const actuel = stabiliser(RAIDEUR, AMORTISSEMENT);
+    expect(actuel).toBeLessThan(ancien * 0.6);
+  });
+
+  it('garde un dépassement, donc de l’inertie', () => {
+    const { trace } = simuler(1, 2);
+    expect(Math.max(...trace)).toBeGreaterThan(1);
+    expect(Math.max(...trace)).toBeLessThan(1.1);
+  });
+
+  it('reste stable au pas de temps maximal', () => {
+    // À `PAS_MAX`, un ressort trop raide divergerait : le produit `dt · ω` doit
+    // rester loin de 2.
+    const pulsation = Math.sqrt(RAIDEUR);
+    expect(PAS_MAX * pulsation).toBeLessThan(1);
+
+    let etat: EtatRessort = { position: 0, vitesse: 0 };
+    for (let i = 0; i < 200; i++) etat = avancerRessort(etat, 1, PAS_MAX);
+    expect(Number.isFinite(etat.position)).toBe(true);
+    expect(etat.position).toBeCloseTo(1, 2);
+  });
+
+  it('l’amortissement reste sous-critique', () => {
+    expect(facteurAmortissement()).toBeGreaterThan(0.6);
+    expect(facteurAmortissement()).toBeLessThan(0.95);
   });
 });

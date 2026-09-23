@@ -35,9 +35,10 @@ export function detecterCapacites(): Capacites {
     // Plafonner le dpr sur mobile : à dpr 3, le nombre de pixels à calculer est
     // multiplié par neuf pour un gain visuel imperceptible sur un buste sombre.
     dpr: (tactile ? [1, 1.5] : [1, 2]) as [number, number],
-    // Les ombres portées coûtent une passe de rendu supplémentaire. Sur mobile,
-    // l'éclairage par arête lumineuse suffit.
-    ombres: !tactile,
+    // Les ombres portées coûtent une passe de rendu entière, et la scène n'en
+    // affiche aucune : aucun maillage ne porte `receiveShadow`. Le drapeau est
+    // conservé pour rester dans le contrat, mais il vaut toujours faux.
+    ombres: false,
   };
 
   // Le mouvement réduit ne renvoie PAS au poster : la scène s'affiche, en pose fixe.
