@@ -78,7 +78,7 @@ export function TableauDeBord() {
             <li key={chemin}>
               <Link
                 to={chemin}
-                className="flex min-h-11 items-center rounded-1 text-petit text-brume transition-colors hover:text-craie"
+                className="flex min-h-11 items-center rounded-1 text-petit text-texte transition-colors hover:text-craie"
               >
                 {libelle}
               </Link>
@@ -106,7 +106,7 @@ function Contenu({ passations }: { passations: PassationResume[] }) {
           {derniere.verdict === 'not_interpretable' || derniere.indice === null ? (
             <div className="border-l-2 border-alerte pl-4">
               <p className="text-t3 text-craie">Profil non interprétable</p>
-              <p className="mesure-texte mt-2 text-petit text-brume">
+              <p className="mesure-texte mt-2 text-petit text-texte">
                 Vos réponses ne se distinguaient pas d’un tirage au hasard, donc aucun score
                 n’a été calculé. Reprenez l’évaluation en prenant le temps de lire chaque
                 énoncé.
@@ -152,12 +152,12 @@ function Contenu({ passations }: { passations: PassationResume[] }) {
                   to={CHEMINS.rapport(passation.id)}
                   className="flex flex-col gap-3 border border-ardoise bg-graphite p-4 transition-colors hover:border-brume sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <span className="text-petit text-brume">
+                  <span className="text-petit text-texte">
                     {formaterDate(passation.commenceeLe)}
                   </span>
 
                   {passation.indice === null ? (
-                    <span className="text-petit text-brume">Profil non interprétable</span>
+                    <span className="text-petit text-texte">Profil non interprétable</span>
                   ) : (
                     <span className="nombres flex items-baseline gap-3">
                       <span className="text-t3 text-craie">{passation.indice}</span>

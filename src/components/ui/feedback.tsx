@@ -83,7 +83,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-start gap-3 border-l-2 border-ardoise py-8 pl-6">
       <p className="text-t3 text-craie">{titre}</p>
-      <p className="mesure-texte text-petit text-brume">{children}</p>
+      <p className="mesure-texte text-petit text-texte">{children}</p>
       {action}
     </div>
   );
@@ -109,7 +109,7 @@ export function ErrorState({
       className="flex flex-col items-start gap-3 border-l-2 border-alerte py-8 pl-6"
     >
       <p className="text-t3 text-craie">{titre}</p>
-      <p className="mesure-texte text-petit text-brume">{children}</p>
+      <p className="mesure-texte text-petit text-texte">{children}</p>
       {action}
     </div>
   );

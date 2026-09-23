@@ -61,7 +61,7 @@ function CountriesExplorer() {
               ].map((info) => (
                 <div key={info.label} className="p-3 sm:p-4 rounded-1 bg-ardoise/40 border border-ardoise/20">
                   <div className="text-lg mb-1">{info.icon}</div>
-                  <p className="text-[10px] sm:text-xs text-brume uppercase tracking-wider">{info.label}</p>
+                  <p className="text-micro sm:text-xs text-brume uppercase tracking-wider">{info.label}</p>
                   <p className="text-xs sm:text-sm font-semibold mt-0.5 break-words">{info.value}</p>
                 </div>
               ))}
@@ -80,7 +80,7 @@ function CountriesExplorer() {
                 {country.facts.map((fact, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 rounded-1 bg-ardoise/40">
                     <span className="text-mesure mt-0.5">◆</span>
-                    <p className="text-sm text-brume">{fact}</p>
+                    <p className="text-sm text-texte">{fact}</p>
                   </div>
                 ))}
               </div>
@@ -98,7 +98,7 @@ function CountriesExplorer() {
         <h1 className="font-titre text-2xl sm:text-4xl font-bold mb-2">
           Les 195 pays du monde
         </h1>
-        <p className="text-brume text-sm sm:text-base">195 pays avec drapeaux, cultures et faits fascinants</p>
+        <p className="text-texte text-sm sm:text-base">195 pays avec drapeaux, cultures et faits fascinants</p>
       </div>
 
       {/* Search & Filters */}
@@ -168,7 +168,7 @@ function CountriesExplorer() {
       {filtered.length === 0 && (
         <div className="text-center py-16">
           <p className="text-brume text-lg mb-2">Aucun pays trouvé</p>
-          <p className="text-brume text-sm">Essayez un autre terme de recherche</p>
+          <p className="text-texte text-sm">Essayez un autre terme de recherche</p>
         </div>
       )}
     </div>

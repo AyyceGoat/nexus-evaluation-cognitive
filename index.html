@@ -61,9 +61,10 @@
             "operatingSystem": "All",
             "url": "https://nexus-evaluation-cognitive.netlify.app/",
             "description": "Évaluation de cinq aptitudes cognitives, restituée avec sa marge d'erreur. Bibliothèque du savoir, 195 pays et quiz de culture générale.",
+            "isAccessibleForFree": true,
             "offers": {
               "@type": "Offer",
-              "price": "500",
+              "price": "0",
               "priceCurrency": "XOF"
             }
           }
@@ -72,8 +73,95 @@
     </script>
 
     <link rel="preconnect" href="https://flagcdn.com" />
+    <!-- ══════════════════════════════════════════════════════════════════
+         Écran de lancement
+
+         Peint par le navigateur AVANT que le moindre JavaScript soit analysé :
+         les styles sont en ligne et la marque est du texte, donc rien à
+         télécharger. Il remplace l'écran noir qu'on voyait jusqu'au premier
+         rendu de React.
+
+         Position fixe : il se superpose, donc il ne décale aucune mise en page
+         et le décalage cumulé reste nul.
+
+         Il est retiré par `src/main.tsx` après le premier rendu, et non par un
+         script en ligne : la politique de sécurité du contenu interdit
+         `script-src 'unsafe-inline'`, et ce n'est pas elle qu'il faut plier.
+         ══════════════════════════════════════════════════════════════════ -->
+    <style>
+      #lancement {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 1.75rem;
+        background: #000;
+        transition: opacity 280ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      #lancement[data-parti] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #lancement .marque {
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: clamp(1.5rem, 7vw, 2rem);
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        color: #f7f6f3;
+        margin: 0;
+      }
+      #lancement .piste {
+        width: min(13.75rem, 52vw);
+        height: 2px;
+        background: #2b2b2b;
+        overflow: hidden;
+      }
+      #lancement .piste span {
+        display: block;
+        height: 100%;
+        width: 40%;
+        background: #6ed8c6;
+        animation: lancement-defile 1.05s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes lancement-defile {
+        from {
+          transform: translateX(-110%);
+        }
+        to {
+          transform: translateX(320%);
+        }
+      }
+      /* Une barre qui défile est une animation : quelqu'un qui en demande moins
+         obtient une barre pleine, immobile. */
+      @media (prefers-reduced-motion: reduce) {
+        #lancement .piste span {
+          animation: none;
+          width: 100%;
+        }
+        #lancement {
+          transition: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="lancement" role="status">
+      <p class="marque">NEXUS</p>
+      <div class="piste" aria-hidden="true"><span></span></div>
+      <span
+        style="
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+        "
+        >Chargement de l’application</span
+      >
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

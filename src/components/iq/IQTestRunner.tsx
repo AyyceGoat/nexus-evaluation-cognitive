@@ -187,7 +187,7 @@ export function IQTestRunner() {
         <h1 className="font-titre text-3xl sm:text-4xl font-bold mb-3">
           Évaluation des aptitudes cognitives
         </h1>
-        <p className="text-brume text-sm sm:text-base leading-relaxed max-w-xl mb-8">
+        <p className="text-texte text-sm sm:text-base leading-relaxed max-w-xl mb-8">
           Cinq aptitudes sont évaluées. Le résultat est une estimation assortie de sa marge
           d’erreur, pas un chiffre exact : prenez le temps de lire chaque énoncé, les réponses
           expédiées sont détectées et rendent le résultat inexploitable.
@@ -214,7 +214,7 @@ export function IQTestRunner() {
                 <span className="block text-xs text-brume mt-1">
                   {option.count} questions
                 </span>
-                <span className="mt-3 flex items-center gap-1.5 text-[11px] text-brume">
+                <span className="mt-3 flex items-center gap-1.5 text-micro text-brume">
                   <Clock className="w-3.5 h-3.5" aria-hidden="true" />
                   {option.minutes}
                 </span>
@@ -304,7 +304,7 @@ export function IQTestRunner() {
         </div>
 
         <div className="p-5 sm:p-8 rounded-2 bg-graphite/60 border border-ardoise/50 mb-8">
-          <p className="text-[11px] uppercase tracking-wide text-brume mb-3">
+          <p className="text-micro uppercase tracking-wide text-brume mb-3">
             {APTITUDE_LABEL[current.aptitude]}
           </p>
           <h2 className="text-base sm:text-lg font-semibold text-craie whitespace-pre-line leading-relaxed mb-5">
@@ -384,7 +384,7 @@ export function IQTestRunner() {
     if (calcul) {
       return (
         <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6" role="status" aria-live="polite">
-          <p className="text-petit text-brume">
+          <p className="text-petit text-texte">
             Calcul du résultat par le serveur. Vos réponses sont enregistrées.
           </p>
           <div className="mt-8">

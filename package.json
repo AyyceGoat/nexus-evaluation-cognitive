@@ -16,6 +16,7 @@
     "verifie:auth": "node scripts/verifie-auth-differee.mjs",
     "verifie:contraste": "node scripts/contrast.mjs",
     "verifie:design": "node scripts/verifie-tokens.mjs",
+    "verifie:fps": "node scripts/mesure-fps.mjs",
     "verifie:lighthouse": "node scripts/lighthouse.mjs",
     "verifie:parcours": "node scripts/parcours-complet.mjs",
     "verifie:rendu": "node scripts/verifie-rendu.mjs",

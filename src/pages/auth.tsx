@@ -10,7 +10,7 @@ function Cadre({ titre, sous, children }: { titre: string; sous: string; childre
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
       <h1 className="text-t1 text-craie">{titre}</h1>
-      <p className="mesure-texte mt-3 text-petit text-brume">{sous}</p>
+      <p className="mesure-texte mt-3 text-petit text-texte">{sous}</p>
       <div className="mt-8">{children}</div>
     </div>
   );
@@ -61,7 +61,7 @@ export function Inscription() {
         sous={`Un lien de confirmation part vers ${email}. Ouvrez-le pour activer votre compte, puis connectez-vous.`}
       >
         <div className="flex flex-col gap-4">
-          <p className="mesure-texte text-petit text-brume">
+          <p className="mesure-texte text-petit text-texte">
             Sans confirmation, la connexion est refusée : c’est ce qui garantit que
             l’adresse vous appartient. Regardez aussi vos courriers indésirables.
           </p>
@@ -113,7 +113,7 @@ export function Inscription() {
         </Button>
       </form>
 
-      <p className="mt-6 text-petit text-brume">
+      <p className="mt-6 text-petit text-texte">
         Vous avez déjà un compte ?{' '}
         <Link to={CHEMINS.connexion} className="text-mesure underline underline-offset-2">
           Se connecter
@@ -152,7 +152,7 @@ export function Connexion() {
   return (
     <Cadre titre="Se connecter" sous="Retrouvez vos passations et vos rapports.">
       {retour && (
-        <p className="mb-6 border-l-2 border-mesure pl-4 text-petit text-brume">
+        <p className="mb-6 border-l-2 border-mesure pl-4 text-petit text-texte">
           Connectez-vous pour accéder à cette page. Vous y serez ramené aussitôt.
         </p>
       )}
@@ -189,7 +189,7 @@ export function Connexion() {
         </div>
       )}
 
-      <div className="mt-6 flex flex-col gap-2 text-petit text-brume">
+      <div className="mt-6 flex flex-col gap-2 text-petit text-texte">
         <Link
           to={CHEMINS.motDePasseOublie}
           className="inline-flex min-h-11 items-center rounded-1 text-mesure underline underline-offset-2"
@@ -261,7 +261,7 @@ export function MotDePasseOublie() {
         </Button>
       </form>
 
-      <p className="mt-6 text-petit text-brume">
+      <p className="mt-6 text-petit text-texte">
         <Link to={CHEMINS.connexion} className="text-mesure underline underline-offset-2">
           Retour à la connexion
         </Link>

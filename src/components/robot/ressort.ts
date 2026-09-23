@@ -5,13 +5,19 @@
  * cœur du comportement du robot, et « la tête dépasse légèrement puis se stabilise » est
  * une propriété qu'on peut vérifier numériquement plutôt qu'à l'œil.
  *
- * Le facteur d'amortissement vaut `AMORTISSEMENT / (2·√RAIDEUR)` ≈ 0,71. Sous-amorti,
- * donc la valeur **dépasse** la cible sur un échelon avant de revenir — c'est l'inertie
- * demandée. Un amortissement critique (ζ = 1) donnerait un suivi propre mais sans vie,
- * et une interpolation par `damp` ne dépasse jamais.
+ * ── Réglage revu : le suivi traînait ──
+ *
+ * Les valeurs précédentes (k = 60, c = 11) donnaient ω = 7,7 rad/s et un temps de
+ * stabilisation d'environ 0,73 s. À l'écran, la tête arrivait nettement après le
+ * curseur : un retard perceptible n'est plus de l'inertie, c'est de la lenteur.
+ *
+ * Désormais ω = √210 ≈ 14,5 rad/s et ζ ≈ 0,79, soit une stabilisation en 0,35 s :
+ * deux fois plus franc, et toujours sous-amorti — la tête dépasse encore légèrement
+ * la cible avant de revenir, ce qui est le mouvement demandé. Un amortissement
+ * critique (ζ = 1) suivrait proprement mais sans vie.
  */
-export const RAIDEUR = 60;
-export const AMORTISSEMENT = 11;
+export const RAIDEUR = 210;
+export const AMORTISSEMENT = 23;
 
 /** Pas de temps maximal accepté. Au retour d'un onglet en veille, `delta` explose. */
 export const PAS_MAX = 1 / 30;

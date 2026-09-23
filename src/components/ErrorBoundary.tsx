@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="font-titre text-xl font-bold mb-2 text-alerte">
               Une erreur inattendue est survenue
             </h2>
-            <p className="text-brume text-sm mb-6 leading-relaxed">
+            <p className="text-texte text-sm mb-6 leading-relaxed">
               Un dysfonctionnement s'est produit lors du rendu de cette section.
             </p>
             <button

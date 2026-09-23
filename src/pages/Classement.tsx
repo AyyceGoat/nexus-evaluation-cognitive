@@ -31,7 +31,7 @@ export function Classement() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <h1 className="text-t1 text-craie">Classement</h1>
-      <p className="mesure-texte mt-3 text-petit text-brume">
+      <p className="mesure-texte mt-3 text-petit text-texte">
         Les comptes confirmés qui ont choisi d’y figurer. Chacun décide, et seul son
         pseudonyme paraît.
       </p>
@@ -45,7 +45,7 @@ export function Classement() {
       {/* Invitation à figurer, adressée à ceux qui n'y sont pas encore. */}
       {utilisateur && profil && !profil.classementVisible && (
         <div className="mt-8 border-l-2 border-mesure pl-4">
-          <p className="mesure-texte text-petit text-brume">
+          <p className="mesure-texte text-petit text-texte">
             Vous n’y figurez pas. Choisissez un pseudonyme et activez votre visibilité
             depuis vos paramètres ; votre passation la plus récente y sera publiée.
           </p>
@@ -108,7 +108,7 @@ export function Classement() {
                     onClick={() => setDeplie(ouvert ? null : entree.pseudonyme)}
                     className="flex min-h-11 w-full items-center gap-4 p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
                   >
-                    <span className="nombres w-8 shrink-0 text-petit text-brume">
+                    <span className="nombres w-8 shrink-0 text-petit text-texte">
                       {entree.rang}
                     </span>
 

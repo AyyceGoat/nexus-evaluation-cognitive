@@ -21,14 +21,14 @@ export interface CouleursScene {
 // verifie-tokens: derogation hex — valeurs de repli indispensables : trois.js exige une
 // couleur littérale et non une variable CSS, et getComputedStyle est indisponible hors
 // navigateur (tests, rendu serveur). Ce sont les seules copies des tokens du projet ;
-// elles doivent être mises à jour si index.css change.
+// `__tests__/theme.test.ts` échoue si elles dérivent de `src/index.css`.
 const REPLI: CouleursScene = {
   noir: '#000000',
-  graphite: '#141414',
-  ardoise: '#232323',
-  brume: '#8a8a8a',
-  craie: '#f2f0ec',
-  mesure: '#5fb3a8',
+  graphite: '#181818',
+  ardoise: '#2b2b2b',
+  brume: '#bebab2',
+  craie: '#f7f6f3',
+  mesure: '#6ed8c6',
 };
 
 export function couleursDuTheme(): CouleursScene {

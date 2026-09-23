@@ -16,8 +16,8 @@ interface Props {
 /* ── Réglages du comportement ─────────────────────────────────────────────── */
 
 /** Amplitude de rotation de la tête, en radians. Au-delà, le cou paraît cassé. */
-const LACET_MAX = 0.38;
-const TANGAGE_MAX = 0.24;
+const LACET_MAX = 0.5;
+const TANGAGE_MAX = 0.3;
 
 /** Le buste suit à 30 % de l'angle de la tête. */
 const PART_DU_BUSTE = 0.3;
@@ -99,10 +99,12 @@ export function BusteProcedural({ cible, anime }: Props) {
     // ── Buste : suit à 30 %, amorti sans dépassement, avec un retard perceptible ──
     if (buste.current) {
       // `dampE` et non `damp3` : une rotation est un Euler, pas un Vector3.
+      // 0,22 et non 0,55 : le buste suivait avec un demi-temps de retard sur une
+      // tête qui traînait déjà. Le retard reste perceptible, il n'est plus subi.
       dampE(
         buste.current.rotation,
         [e.tangage * PART_DU_BUSTE, e.lacet * PART_DU_BUSTE, 0],
-        0.55,
+        0.22,
         dt
       );
 

@@ -135,7 +135,7 @@ function Etape({ titre, corps }: { titre: string; corps: ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
       <h1 className="text-t1 text-craie">{titre}</h1>
-      <p className="mesure-texte text-corps text-brume">{corps}</p>
+      <p className="mesure-texte text-corps text-texte">{corps}</p>
     </div>
   );
 }

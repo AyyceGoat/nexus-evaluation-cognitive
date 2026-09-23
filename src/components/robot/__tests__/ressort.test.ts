@@ -58,7 +58,13 @@ describe('ressort de la tête', () => {
   it('ne saute jamais : le premier pas reste une petite fraction du trajet', () => {
     const { trace } = simuler(1, 0.05);
     // Un « snap » mettrait la tête à destination en une image.
-    expect(trace[0]).toBeLessThan(0.05);
+    //
+    // La borne est passée de 5 % à 12 % en même temps que la raideur : à k = 210,
+    // un pas de 50 ms couvre 5,8 % du trajet, contre 1,7 % à k = 60. C'est le
+    // réglage voulu — le suivi traînait — et la propriété vérifiée reste la même :
+    // aucune image ne doit emporter une part notable du chemin, sinon le mouvement
+    // se lit comme un saut et non comme un suivi.
+    expect(trace[0]).toBeLessThan(0.12);
   });
 
   it('revient à la pose neutre quand la cible revient à zéro', () => {

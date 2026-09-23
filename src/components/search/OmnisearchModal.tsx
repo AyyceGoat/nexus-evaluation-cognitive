@@ -182,7 +182,7 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
               <X className="w-4 h-4" />
             </button>
           )}
-          <kbd className="hidden sm:inline-block px-2 py-0.5 rounded bg-ardoise/50 border border-ardoise text-[10px] text-brume nombres">
+          <kbd className="hidden sm:inline-block px-2 py-0.5 rounded bg-ardoise/50 border border-ardoise text-micro text-brume nombres">
             ESC
           </kbd>
         </div>
@@ -190,7 +190,7 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
         {/* Liste des Résultats */}
         <div className="max-h-[60vh] overflow-y-auto p-3 space-y-1.5">
           {results.length === 0 ? (
-            <div className="py-12 text-center text-brume text-sm">
+            <div className="py-12 text-center text-texte text-sm">
               Aucun résultat trouvé pour « <strong className="text-craie">{query}</strong> ».
             </div>
           ) : (
@@ -216,11 +216,11 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
                         <p className="font-semibold text-xs sm:text-sm text-craie truncate">
                           {item.title}
                         </p>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-ardoise/50 text-brume shrink-0">
+                        <span className="text-micro px-2 py-0.5 rounded-full bg-ardoise/50 text-brume shrink-0">
                           {item.category}
                         </span>
                       </div>
-                      <p className="text-[11px] text-brume truncate mt-0.5">
+                      <p className="text-micro text-brume truncate mt-0.5">
                         {item.subtitle}
                       </p>
                     </div>
@@ -238,7 +238,7 @@ export function OmnisearchModal({ isOpen, onClose, navigate }: OmnisearchModalPr
         </div>
 
         {/* Pied de modal avec raccourcis */}
-        <div className="p-3 bg-graphite/60 border-t border-ardoise/40 text-[11px] text-brume flex items-center justify-between px-5">
+        <div className="p-3 bg-graphite/60 border-t border-ardoise/40 text-micro text-brume flex items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <span>↑↓ pour naviguer</span>
             <span>•</span>

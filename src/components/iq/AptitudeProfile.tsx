@@ -41,7 +41,7 @@ export function AptitudeProfile({ aptitudes, forces, faiblesses }: AptitudeProfi
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h3 className="text-t3 text-craie">Profil par aptitude</h3>
-        <p className="mesure-texte text-petit text-brume">
+        <p className="mesure-texte text-petit text-texte">
           Chaque bande situe une aptitude par rapport à vos autres aptitudes. Sa largeur est
           la marge d’erreur, et elle est large : sept questions ne suffisent pas à départager
           finement cinq aptitudes.

@@ -43,6 +43,24 @@ export function detecterCapacites(): Capacites {
   // Le mouvement réduit ne renvoie PAS au poster : la scène s'affiche, en pose fixe.
   // Retirer l'image à quelqu'un qui demande moins d'animation serait le punir.
 
+  // ── Tactile : poster, sans discussion ──────────────────────────────────
+  //
+  // Décision assumée, et prise faute de pouvoir mesurer autrement. La boucle de
+  // rendu a été mesurée à 24 images par seconde sur un rendu logiciel de bureau
+  // (`npm run verifie:fps`) ; je n'ai aucun moyen de mesurer un vrai GPU de
+  // téléphone depuis cette machine. Servir une 3D dont je ne peux pas garantir
+  // la fluidité sur l'appareil où elle compte le plus serait un pari.
+  //
+  // Le poster n'est pas un pis-aller : c'est le même buste, en SVG, sans boucle
+  // de rendu, sans three.js téléchargé, et sans un octet dépensé en batterie.
+  // Sur mobile, cela retire aussi 247 ko compressés du chargement.
+  //
+  // Un écran tactile de bureau tombe dans ce cas : il n'a pas de curseur à
+  // suivre, donc le robot n'y aurait de toute façon rien à suivre.
+  if (tactile) {
+    return { ...base, verdict: 'poster', raison: 'appareil tactile' };
+  }
+
   const coeurs = navigator.hardwareConcurrency;
   if (typeof coeurs === 'number' && coeurs > 0 && coeurs < COEURS_MINIMUM) {
     return { ...base, verdict: 'poster', raison: `${coeurs} cœur(s) logique(s)` };

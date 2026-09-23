@@ -16,7 +16,7 @@ function QuizSection() {
           <h1 className="font-titre text-2xl sm:text-4xl font-bold mb-2">
             Quiz de culture générale
           </h1>
-          <p className="text-brume text-sm sm:text-base max-w-lg mx-auto">
+          <p className="text-texte text-sm sm:text-base max-w-lg mx-auto">
             100+ questions • 9 domaines • 6 modes de jeu
           </p>
         </div>
@@ -47,7 +47,7 @@ function QuizSection() {
               >
                 <span className="text-xl sm:text-2xl mb-1 block">{mode.icon}</span>
                 <p className="font-semibold text-xs sm:text-sm">{mode.name}</p>
-                <p className="text-[10px] sm:text-xs text-brume mt-0.5 line-clamp-2">{mode.description}</p>
+                <p className="text-micro sm:text-xs text-brume mt-0.5 line-clamp-2">{mode.description}</p>
               </button>
             ))}
           </div>
@@ -86,7 +86,7 @@ function QuizSection() {
                 }`}
               >
                 <span className="text-lg sm:text-2xl block mb-0.5">{cat.icon}</span>
-                <p className="text-[10px] sm:text-xs font-medium truncate">{cat.name}</p>
+                <p className="text-micro sm:text-xs font-medium truncate">{cat.name}</p>
               </button>
             ))}
           </div>
@@ -249,7 +249,7 @@ function QuizSection() {
              '🚀 Le début du voyage !'}
           </h2>
 
-          <p className="text-brume text-sm sm:text-base max-w-lg mx-auto mb-8 leading-relaxed">
+          <p className="text-texte text-sm sm:text-base max-w-lg mx-auto mb-8 leading-relaxed">
             {game.appraisal}
           </p>
 
@@ -323,7 +323,7 @@ function QuizSection() {
         <div className="flex items-center justify-between mb-2 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <span className="text-lg">{modeInfo?.icon}</span>
-            <span className="text-xs sm:text-sm text-brume truncate">
+            <span className="text-xs sm:text-sm text-texte truncate">
               Question {game.currentIndex + 1}/{game.questions.length}
             </span>
           </div>
@@ -374,7 +374,7 @@ function QuizSection() {
             <span className="px-3 py-1 rounded-full bg-mesure/10 text-mesure text-xs font-medium">
               {quizCategories.find(c => c.id === question.category)?.name}
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+            <span className={`px-2 py-0.5 rounded-full text-micro font-medium ${
               question.difficulty === 'easy' ? 'bg-mesure/20 text-mesure' :
               question.difficulty === 'medium' ? 'bg-mesure/20 text-mesure' :
               'bg-alerte/20 text-alerte'
@@ -416,7 +416,7 @@ function QuizSection() {
                   {String.fromCharCode(65 + i)}
                 </span>
                 <span className="text-sm sm:text-base flex-1">{opt}</span>
-                <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-ardoise/50 text-brume border border-ardoise nombres">
+                <span className="hidden sm:inline-block text-micro px-1.5 py-0.5 rounded bg-ardoise/50 text-brume border border-ardoise nombres">
                   {i + 1}
                 </span>
                 {game.answered && i === question.correct && <span className="text-mesure">✓</span>}
@@ -431,7 +431,7 @@ function QuizSection() {
           <div className="mt-4">
             {(game.selectedMode === 'learning' || !game.autoAdvance) && (
               <div className="bg-graphite border border-ardoise rounded-1 p-4 mb-4">
-                <p className="text-xs sm:text-sm text-brume leading-relaxed">
+                <p className="text-xs sm:text-sm text-texte leading-relaxed">
                   <span className="text-mesure font-semibold">💡 </span>
                   {question.explanation}
                 </p>

@@ -27,7 +27,7 @@ export function IntervalBar({ scaled, min = 55, max = 145, className }: Interval
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-        <p className="nombres font-titre text-[3rem] leading-none text-craie">{scaled.point}</p>
+        <p className="nombres font-titre text-indice leading-none text-craie">{scaled.point}</p>
         <p className="nombres text-corps text-mesure">
           {scaled.lower95} – {scaled.upper95}
         </p>

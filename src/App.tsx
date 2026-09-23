@@ -96,7 +96,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setRechercheOuverte(true)}
-                className="flex min-h-11 items-center gap-2 rounded-1 px-3 text-petit text-brume transition-colors hover:text-craie"
+                className="flex min-h-11 items-center gap-2 rounded-1 px-3 text-petit text-texte transition-colors hover:text-craie"
               >
                 <Search className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">Rechercher</span>
@@ -176,7 +176,7 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div className="flex flex-col gap-2">
             <p className="font-titre text-t3 text-craie">NEXUS</p>
-            <p className="mesure-texte text-petit text-brume">
+            <p className="mesure-texte text-petit text-texte">
               Évaluation des aptitudes cognitives, avec la marge d’erreur.
             </p>
           </div>
@@ -187,7 +187,7 @@ export default function App() {
                 <li key={lien.to}>
                   <Link
                     to={lien.to}
-                    className="flex min-h-11 items-center rounded-1 text-petit text-brume transition-colors hover:text-craie"
+                    className="flex min-h-11 items-center rounded-1 text-petit text-texte transition-colors hover:text-craie"
                   >
                     {lien.libelle}
                   </Link>

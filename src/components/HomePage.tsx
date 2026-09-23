@@ -31,7 +31,7 @@ function HomePage() {
             Mesurez vos aptitudes cognitives. Avec la marge d’erreur.
           </h1>
 
-          <p className="mesure-texte text-corps text-brume">
+          <p className="mesure-texte text-corps text-texte">
             {DEFAULT_SESSION_LENGTH} questions, environ 25 minutes. Vous obtenez un indice
             estimé, son intervalle de confiance, et un profil sur cinq aptitudes. Gratuit,
             sans compte.
@@ -43,7 +43,7 @@ function HomePage() {
             </Link>
             <Link
               to={CHEMINS.inscription}
-              className="inline-flex min-h-11 items-center rounded-1 text-petit text-brume transition-colors hover:text-craie"
+              className="inline-flex min-h-11 items-center rounded-1 text-petit text-texte transition-colors hover:text-craie"
             >
               Créer un compte pour suivre ma progression
             </Link>
@@ -68,14 +68,14 @@ function HomePage() {
               <span className="font-titre text-t1 text-craie">112</span>
               <span className="text-corps text-mesure">104 – 120</span>
             </p>
-            <p className="mt-3 text-petit text-brume">
+            <p className="mt-3 text-petit text-texte">
               L’intervalle fait partie du résultat. Il n’est ni en petit, ni relégué en
               note.
             </p>
           </Promesse>
 
           <Promesse titre="Un profil par aptitude">
-            <p className="text-petit text-brume">
+            <p className="text-petit text-texte">
               Cinq aptitudes, en bandes larges dont l’épaisseur est la marge d’erreur.
               Aucun sous-score chiffré : sur sept questions par aptitude, un classement
               serait dicté par le bruit.
@@ -83,7 +83,7 @@ function HomePage() {
           </Promesse>
 
           <Promesse titre="Un centile situé">
-            <p className="text-petit text-brume">
+            <p className="text-petit text-texte">
               La population de référence est nommée en toutes lettres, pour que vous
               sachiez à qui vous êtes comparé.
             </p>
@@ -98,7 +98,7 @@ function HomePage() {
             Si vos réponses ne se distinguent pas d’un tirage au hasard, aucun score n’est
             affiché.
           </p>
-          <p className="mesure-texte mt-3 text-petit text-brume">
+          <p className="mesure-texte mt-3 text-petit text-texte">
             Un test d’aptitude qui annonce un chiffre flatteur à quelqu’un qui a cliqué au
             hasard ne mesure rien. NEXUS compare vos réponses à ce que produirait le
             hasard, et vous montre les deux nombres.
@@ -134,7 +134,7 @@ function HomePage() {
                 className="flex min-h-16 flex-col justify-center gap-1 py-4 transition-colors hover:bg-graphite sm:flex-row sm:items-center sm:justify-between sm:gap-6"
               >
                 <span className="text-t3 text-craie">{entree.titre}</span>
-                <span className="text-petit text-brume">{entree.detail}</span>
+                <span className="text-petit text-texte">{entree.detail}</span>
               </Link>
             </li>
           ))}
@@ -143,7 +143,7 @@ function HomePage() {
 
       {/* ── Méthode ─────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
-        <p className="mesure-texte text-petit text-brume">
+        <p className="mesure-texte text-petit text-texte">
           L’estimation repose sur un modèle de réponse à l’item à trois paramètres, sur une
           banque de {TAILLE_BANQUE} questions. Ce n’est pas un diagnostic psychologique et
           cela ne remplace pas un bilan conduit par un psychologue.

@@ -24,8 +24,12 @@ interface Props {
  * Cadence l'invalidation.
  *
  * Le canvas tourne en `frameloop="demand"` : rien n'est rendu sans qu'on le demande.
- * Ce composant demande une image tant qu'il y a quelque chose à animer, plafonné à
- * 30 images par seconde — au-delà, on dépense de la batterie pour un buste qui respire.
+ * Ce composant demande une image à chaque rafraîchissement, sans plafond.
+ *
+ * Il y avait un plafond à 30 images par seconde, pour économiser la batterie. Mesuré,
+ * le résultat était un suivi à 24 images par seconde : saccadé, et perçu comme lent.
+ * L'économie ne valait pas ce prix — d'autant que la scène n'est plus servie sur
+ * téléphone, où la batterie compte vraiment.
  *
  * Il ne demande rien du tout quand le canvas est hors du viewport, ni sous
  * `prefers-reduced-motion`. Dans ce dernier cas, une seule image est rendue : la pose
@@ -40,13 +44,9 @@ function Cadence({ actif }: { actif: boolean }) {
     if (!actif) return;
 
     let anime = 0;
-    let dernier = 0;
-    const PAS = 1000 / 30;
 
-    const boucle = (maintenant: number) => {
+    const boucle = () => {
       anime = requestAnimationFrame(boucle);
-      if (maintenant - dernier < PAS) return;
-      dernier = maintenant;
       invalidate();
     };
 

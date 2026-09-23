@@ -23,12 +23,12 @@ const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
       // Échelle typographique de DESIGN.md §3.2.
-      'font-size': [{ text: ['display', 't1', 't2', 't3', 'corps', 'petit', 'micro'] }],
+      'font-size': [{ text: ['display', 't1', 't2', 't3', 'corps', 'petit', 'micro', 'indice'] }],
       // Palette de DESIGN.md §2.
-      'text-color': [{ text: ['noir', 'graphite', 'ardoise', 'brume', 'craie', 'mesure', 'alerte'] }],
-      'bg-color': [{ bg: ['noir', 'graphite', 'ardoise', 'brume', 'craie', 'mesure', 'alerte'] }],
+      'text-color': [{ text: ['noir', 'graphite', 'ardoise', 'brume', 'texte', 'craie', 'mesure', 'alerte'] }],
+      'bg-color': [{ bg: ['noir', 'graphite', 'ardoise', 'brume', 'texte', 'craie', 'mesure', 'alerte'] }],
       'border-color': [
-        { border: ['noir', 'graphite', 'ardoise', 'brume', 'craie', 'mesure', 'alerte'] },
+        { border: ['noir', 'graphite', 'ardoise', 'brume', 'texte', 'craie', 'mesure', 'alerte'] },
       ],
       rounded: [{ rounded: ['0', '1', '2', '3'] }],
     },

@@ -43,6 +43,29 @@ const Profil = lazy(() => import('./pages/compte').then((m) => ({ default: m.Pro
 const Parametres = lazy(() => import('./pages/compte').then((m) => ({ default: m.Parametres })));
 const NonTrouve = lazy(() => import('./pages/compte').then((m) => ({ default: m.NonTrouve })));
 
+/**
+ * Retire l'écran de lancement, une fois l'application réellement peinte.
+ *
+ * Deux images d'attente et non zéro : `render` ne fait qu'ordonnancer le travail.
+ * Retirer l'écran dans la foulée découvrirait une page encore vide — on aurait
+ * remplacé un écran noir par un clignotement, ce qui est pire.
+ *
+ * `prefers-reduced-motion` supprime la transition côté CSS ; ici on attend tout de
+ * même la fin de la durée nominale, ce qui ne coûte rien et évite un cas
+ * particulier de plus.
+ */
+function retirerEcranDeLancement(): void {
+  const ecran = document.getElementById('lancement');
+  if (!ecran) return;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      ecran.dataset.parti = '';
+      window.setTimeout(() => ecran.remove(), 320);
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -149,3 +172,5 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>
 );
+
+retirerEcranDeLancement();

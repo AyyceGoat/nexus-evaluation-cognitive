@@ -356,10 +356,33 @@ try {
     'Alice ne peut pas supprimer une ligne du classement',
     await clientAlice.from('classement').delete().neq('score', -1).select('user_id')
   );
-  doitEtreVide(
-    'Personne ne lit la table du classement directement',
+  // La vue est repassee en `security_invoker` pour satisfaire l'Advisor : ce sont
+  // desormais les PRIVILEGES DE COLONNE qui gardent user_id prive, et non
+  // l'absence de politique de lecture. On verifie donc le privilege, pas le vide.
+  appelRefuse(
+    'Alice ne peut pas lire user_id dans le classement',
     await clientAlice.from('classement').select('user_id').limit(5)
   );
+  appelRefuse(
+    'Alice ne peut pas lire session_id dans le classement',
+    await clientAlice.from('classement').select('session_id').limit(5)
+  );
+  appelRefuse(
+    'Un visiteur anonyme ne peut pas lire user_id dans le classement',
+    await anonyme.from('classement').select('user_id').limit(5)
+  );
+  appelRefuse(
+    'Une etoile sur le classement est refusee, car elle inclurait user_id',
+    await anonyme.from('classement').select('*').limit(1)
+  );
+  {
+    const { error: e } = await anonyme.from('classement').select('pseudonyme, score').limit(1);
+    verifier(
+      'Les colonnes publiques du classement restent lisibles',
+      !e,
+      e?.message.slice(0, 60) ?? ''
+    );
+  }
   doitEchouer(
     'Un visiteur anonyme ne peut pas écrire au classement',
     await anonyme
@@ -707,6 +730,141 @@ try {
     (apresRetrait ?? []).length === 0,
     `${(apresRetrait ?? []).length} ligne(s) restante(s)`
   );
+  console.log('');
+  console.log('── 10. Suppressions, contraintes et fonctions ────────────────');
+
+  // Aucune politique DELETE n'existe nulle part : un journal qu'on peut effacer
+  // ne vaut rien pour calibrer, et un classement qu'on peut vider n'est pas un
+  // classement.
+  doitEchouer(
+    'Alice ne peut pas supprimer ses reponses',
+    await clientAlice.from('iq_responses').delete().eq('session_id', passationAlice).select('id')
+  );
+  doitEchouer(
+    'Alice ne peut pas supprimer ses passations',
+    await clientAlice.from('iq_sessions').delete().eq('id', passationAlice).select('id')
+  );
+  doitEchouer(
+    'Alice ne peut pas supprimer son profil',
+    await clientAlice.from('profiles').delete().eq('id', alice.id).select('id')
+  );
+  doitEchouer(
+    'Alice ne peut pas supprimer des items administres',
+    await clientAlice
+      .from('iq_session_items')
+      .delete()
+      .eq('session_id', passationAlice)
+      .select('item_id')
+  );
+
+  // Les colonnes de profil non accordees restent inecrivables.
+  doitEchouer(
+    'Alice ne peut pas reecrire l identifiant de son profil',
+    await clientAlice.from('profiles').update({ id: bob.id }).eq('id', alice.id).select('id')
+  );
+
+  // Longueur de passation : trois valeurs, et pas une valeur libre.
+  for (const longueur of [1, 7, 120, 10000, -5, null]) {
+    appelRefuse(
+      `Une passation de longueur ${longueur} est refusee`,
+      await clientAlice.rpc('ouvrir_passation', { p_longueur: longueur })
+    );
+  }
+
+  // Contraintes de forme du pseudonyme : ni adresse, ni phrase, ni doublon.
+  for (const pseudo of ['a', 'avec espace', 'contact@exemple.ci', 'x'.repeat(30), '']) {
+    appelRefuse(
+      `Le pseudonyme « ${pseudo.slice(0, 18)} » est refuse`,
+      await clientAlice.rpc('definir_pseudonyme', { p_pseudonyme: pseudo })
+    );
+  }
+
+  const { data: pseudoAlice } = await clientAlice
+    .from('profiles')
+    .select('pseudonyme')
+    .eq('id', alice.id)
+    .maybeSingle();
+  appelRefuse(
+    'Bob ne peut pas prendre le pseudonyme d Alice',
+    await clientBob.rpc('definir_pseudonyme', { p_pseudonyme: pseudoAlice?.pseudonyme ?? 'Inconnu' })
+  );
+
+  // Contraintes sur les reponses.
+  const itemLibre = (questions ?? [])[5]?.id;
+  for (const [nom, ligne] of [
+    ['un index de reponse hors bornes', { selected_index: 42, response_seconds: 30 }],
+    ['une duree negative', { selected_index: 0, response_seconds: -10 }],
+  ]) {
+    doitEchouer(
+      `Une reponse avec ${nom} est refusee`,
+      await clientAlice
+        .from('iq_responses')
+        .insert({
+          session_id: passationAlice,
+          user_id: alice.id,
+          item_id: itemLibre,
+          ...ligne,
+        })
+        .select('id')
+    );
+  }
+
+  // Usurpation d identite dans une insertion de reponse.
+  doitEchouer(
+    'Alice ne peut pas ecrire une reponse au nom de Bob',
+    await clientAlice
+      .from('iq_responses')
+      .insert({
+        session_id: passationAlice,
+        user_id: bob.id,
+        item_id: itemLibre,
+        selected_index: 0,
+        response_seconds: 30,
+      })
+      .select('id')
+  );
+
+  console.log('');
+  console.log('── 11. La fonction serveur, vue par un tiers ─────────────────');
+
+  // Clore la passation de quelqu'un d'autre : c'est la tentative la plus directe
+  // pour lui fabriquer un score, ou pour obtenir son corrige.
+  const { data: tentativeBob, error: erreurTentativeBob } =
+    await clientBob.functions.invoke('cloturer-passation', {
+      body: { sessionId: passationAlice },
+    });
+  verifier(
+    'Bob ne peut pas clore la passation d Alice',
+    Boolean(erreurTentativeBob) || !tentativeBob?.resultat,
+    erreurTentativeBob ? 'refus' : JSON.stringify(tentativeBob).slice(0, 60)
+  );
+
+  // Appel sans jeton du tout.
+  {
+    const reponse = await fetch(`${URL}/functions/v1/cloturer-passation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: passationAlice }),
+    });
+    verifier(
+      'La fonction refuse un appel sans en-tete d autorisation',
+      reponse.status === 401,
+      `HTTP ${reponse.status}`
+    );
+  }
+
+  // Identifiant malformé : ne doit pas atteindre la base.
+  for (const identifiant of ['', 'pas-un-uuid', "' or 1=1 --", '../../etc/passwd']) {
+    const { data, error } = await clientAlice.functions.invoke('cloturer-passation', {
+      body: { sessionId: identifiant },
+    });
+    verifier(
+      `La fonction refuse l identifiant « ${identifiant.slice(0, 14)} »`,
+      Boolean(error) || !data?.resultat,
+      error ? 'refus' : JSON.stringify(data).slice(0, 40)
+    );
+  }
+
 } catch (erreur) {
   console.error('');
   console.error('INTERROMPU :', erreur instanceof Error ? erreur.message : String(erreur));

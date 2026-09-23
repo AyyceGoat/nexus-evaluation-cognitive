@@ -10,7 +10,7 @@ function Entete({ titre, sous }: { titre: string; sous: string }) {
   return (
     <div className="flex flex-col gap-3">
       <h1 className="text-t1 text-craie">{titre}</h1>
-      <p className="mesure-texte text-petit text-brume">{sous}</p>
+      <p className="mesure-texte text-petit text-texte">{sous}</p>
     </div>
   );
 }
@@ -106,7 +106,7 @@ export function Parametres() {
 
         <section className="flex flex-col gap-3 border-t border-ardoise pt-10">
           <h2 className="text-t3 text-craie">Session</h2>
-          <p className="mesure-texte text-petit text-brume">
+          <p className="mesure-texte text-petit text-texte">
             Vous déconnecter ne supprime rien : vos passations restent enregistrées.
           </p>
           <div>
@@ -118,7 +118,7 @@ export function Parametres() {
 
         <section className="flex flex-col gap-3 border-t border-ardoise pt-10">
           <h2 className="text-t3 text-craie">Supprimer mon compte</h2>
-          <p className="mesure-texte text-petit text-brume">
+          <p className="mesure-texte text-petit text-texte">
             La suppression définitive du compte et des passations n’est pas encore
             disponible depuis l’application. Elle exige une fonction serveur qui reste à
             déployer. En attendant, la demande se fait par courrier électronique.
@@ -216,14 +216,14 @@ function ReglagesClassement() {
     <section className="flex flex-col gap-4">
       <h2 className="text-t3 text-craie">Classement public</h2>
 
-      <p className="mesure-texte text-petit text-brume">
+      <p className="mesure-texte text-petit text-texte">
         Si vous y figurez, sont publiés : votre pseudonyme, votre niveau, votre indice
         avec son intervalle, le détail par aptitude et la date de passation. Ni votre
         adresse e-mail, ni votre nom, ni aucune autre donnée.
       </p>
 
       {!confirme && (
-        <p className="mesure-texte border-l-2 border-alerte pl-4 text-petit text-brume">
+        <p className="mesure-texte border-l-2 border-alerte pl-4 text-petit text-texte">
           Confirmez d’abord votre adresse e-mail : seuls les comptes confirmés peuvent
           figurer au classement.
         </p>
@@ -256,7 +256,7 @@ function ReglagesClassement() {
         </div>
       </form>
 
-      <p className="text-petit text-brume">
+      <p className="text-petit text-texte">
         État actuel :{' '}
         <span className={visible ? 'text-mesure' : 'text-craie'}>
           {visible ? 'vous figurez au classement' : 'vous n’y figurez pas'}

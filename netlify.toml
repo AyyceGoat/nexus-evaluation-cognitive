@@ -9,6 +9,9 @@
   status = 200
 
 # En-têtes HTTP de performance et sécurité
+#
+# `Strict-Transport-Security` n'est pas déclaré ici : Netlify le sert déjà, en
+# max-age=31536000 avec includeSubDomains et preload. Vérifié sur la réponse.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -16,6 +19,35 @@
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # Aucune de ces fonctions n'est utilisée par le produit. Les refuser évite
+    # qu'un script injecté puisse les demander à la place de l'utilisateur.
+    #
+    # `accelerometer` et `gyroscope` sont une exception assumée : le robot du
+    # hero suit l'inclinaison de l'appareil sur mobile, faute de curseur.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), midi=(), display-capture=(), accelerometer=(self), gyroscope=(self)"
+
+    # Isole le contexte de navigation : une fenêtre ouverte depuis le site ne
+    # garde pas de référence exploitable vers lui.
+    Cross-Origin-Opener-Policy = "same-origin"
+
+    # Politique de sécurité du contenu. Chaque directive répond à un besoin réel :
+    #
+    #   script-src 'self'          aucun script tiers, aucun eval ; le JSON-LD de
+    #                              la page n'est pas exécutable et n'est donc pas
+    #                              concerné
+    #   style-src  'unsafe-inline' React pose des attributs `style` (largeur des
+    #                              barres d'intervalle et de progression) ; un
+    #                              attribut de style exige cette permission
+    #   img-src    data:           le poster SVG du robot est encodé dans la page
+    #   img-src    flagcdn.com      les drapeaux de la page Pays, vérifié en usage
+    #                               réel : sans cette origine, 195 images sont
+    #                               bloquées
+    #   connect-src *.supabase.co  authentification, base et fonction serveur
+    #   worker-src blob:           three.js peut créer un worker pour le décodage
+    #   frame-ancestors 'none'     même effet que X-Frame-Options, pour les
+    #                              navigateurs qui ignorent le second
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://flagcdn.com; font-src 'self'; connect-src 'self' https://*.supabase.co; worker-src 'self' blob:; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
 # Mise en cache longue durée pour les assets avec hash
 [[headers]]

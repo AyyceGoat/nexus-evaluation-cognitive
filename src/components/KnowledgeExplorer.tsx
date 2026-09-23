@@ -220,7 +220,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
             <h1 className="font-titre text-3xl sm:text-5xl font-black mb-3">
               Bibliothèque du savoir
             </h1>
-            <p className="text-brume text-sm sm:text-base max-w-2xl font-light">
+            <p className="text-texte text-sm sm:text-base max-w-2xl font-light">
               Explorez les grands tournants de l'histoire, les mécanismes financiers, les avancées scientifiques, les lois de la psychologie et la pensée des géants.
             </p>
           </div>
@@ -272,7 +272,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
                 >
                   <span>{domain.icon}</span>
                   <span>{domain.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-ardoise/50 nombres">
+                  <span className="text-micro px-1.5 py-0.2 rounded-full bg-ardoise/50 nombres">
                     {count}
                   </span>
                 </button>
@@ -301,7 +301,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
                     {/* Header de la Carte */}
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-3xl">{item.icon}</span>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-mesure/15 border border-mesure/30 text-mesure font-semibold">
+                      <span className="text-micro px-2.5 py-0.5 rounded-full bg-mesure/15 border border-mesure/30 text-mesure font-semibold">
                         {item.category}
                       </span>
                     </div>
@@ -317,7 +317,7 @@ function KnowledgeExplorer({ initialDomainId }: Props) {
 
                   {/* Pied de Carte */}
                   <div className="pt-3 border-t border-ardoise/30 flex items-center justify-between text-xs text-mesure">
-                    <span className="text-brume flex items-center gap-1 text-[11px]">
+                    <span className="text-brume flex items-center gap-1 text-micro">
                       <Clock className="w-3.5 h-3.5" /> {item.readTimeMinutes} min
                     </span>
                     <span className="font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">

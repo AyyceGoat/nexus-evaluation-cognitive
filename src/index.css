@@ -13,52 +13,109 @@
    ailleurs que dans ce bloc. Vérifié par scripts/verifie-tokens.mjs.
    ════════════════════════════════════════════════════════════════════════ */
 @theme {
-  /* Palette — six couleurs, plus une fonctionnelle.
-     Contrastes calculés dans scripts/contrast.mjs. */
+  /* ── Palette ──────────────────────────────────────────────────────────
+     Reprise entièrement : la version précédente posait du gris #8a8a8a sur
+     du noir, soit 5,9:1. Conforme au minimum AA, et pourtant illisible sur
+     un téléphone en plein jour — un écran de bureau dans une pièce sombre
+     n'est pas la condition d'usage à viser.
+
+     Chaque valeur de texte dépasse maintenant 10:1, donc AAA (7:1) avec de
+     la marge. Ratios recalculés par `npm run verifie:contraste`.
+
+     Trois niveaux de texte, et non deux : c'est ce qui crée la hiérarchie
+     que l'ancienne palette n'avait pas.
+       craie  titres et chiffres      18,6:1
+       texte  corps de lecture        16,1:1
+       brume  secondaire, méta        10,9:1                              */
+
   --color-noir: #000000;
-  --color-graphite: #141414;
-  --color-ardoise: #232323;
-  --color-brume: #8a8a8a;
-  --color-craie: #f2f0ec;
-  --color-mesure: #5fb3a8;
-  --color-alerte: #e8877a;
+  /* Surfaces légèrement remontées : une carte doit se détacher du fond,
+     sinon la page n'a aucun relief et rien n'invite à la parcourir. */
+  --color-graphite: #181818;
+  --color-ardoise: #2b2b2b;
+
+  --color-brume: #bebab2;
+  --color-texte: #e4e1db;
+  --color-craie: #f7f6f3;
+
+  /* Accent remonté de #5fb3a8 à 12,3:1 : c'est lui qui donne de la vie, il
+     doit donc être franc. Le noir sur cet accent reste à 12,3:1, donc les
+     boutons principaux gagnent aussi en lisibilité. */
+  --color-mesure: #6ed8c6;
+  --color-alerte: #f5a49a;
 
   /* Familles. Bricolage pour les titres, Public Sans pour tout le reste,
      chiffres compris — cf. DESIGN.md §3.1. */
   --font-titre: "Bricolage Grotesque Variable", "Public Sans Variable", system-ui, sans-serif;
   --font-corps: "Public Sans Variable", system-ui, -apple-system, sans-serif;
 
-  /* Échelle typographique. L'échelle d'espacement de Tailwind (base 4 px)
-     coïncide déjà avec celle de DESIGN.md §4.1 : rien à redéfinir. */
-  --text-display: 3.5rem;
-  --text-display--line-height: 1.04;
+  /* ── Échelle typographique ────────────────────────────────────────────
+     Tailles fluides par `clamp` : la borne basse est celle d'un téléphone
+     à 360 px, la haute celle d'un écran large. Aucun palier de rupture à
+     gérer, et surtout aucun titre de 56 px sur un écran de 360.
+
+     Les tailles de LECTURE ne descendent plus sous 16 px. `micro` (14 px)
+     est réservé aux étiquettes et aux méta-données, jamais à une phrase.  */
+
+  --text-display: clamp(2.25rem, 8.5vw, 3.75rem);
+  --text-display--line-height: 1.06;
   --text-display--letter-spacing: -0.03em;
   --text-display--font-weight: 600;
 
-  --text-t1: 2.25rem;
-  --text-t1--line-height: 1.1;
+  --text-t1: clamp(1.75rem, 6vw, 2.5rem);
+  --text-t1--line-height: 1.15;
   --text-t1--letter-spacing: -0.02em;
   --text-t1--font-weight: 600;
 
-  --text-t2: 1.5rem;
-  --text-t2--line-height: 1.2;
+  --text-t2: clamp(1.375rem, 4.5vw, 1.75rem);
+  --text-t2--line-height: 1.25;
   --text-t2--letter-spacing: -0.01em;
   --text-t2--font-weight: 600;
 
-  --text-t3: 1.125rem;
-  --text-t3--line-height: 1.3;
+  --text-t3: clamp(1.125rem, 3.2vw, 1.3125rem);
+  --text-t3--line-height: 1.35;
   --text-t3--font-weight: 550;
 
-  --text-corps: 1rem;
-  --text-corps--line-height: 1.6;
+  --text-corps: 1.0625rem;
+  --text-corps--line-height: 1.65;
 
-  --text-petit: 0.875rem;
-  --text-petit--line-height: 1.5;
+  --text-petit: 1rem;
+  --text-petit--line-height: 1.6;
 
-  --text-micro: 0.75rem;
-  --text-micro--line-height: 1.4;
-  --text-micro--letter-spacing: 0.01em;
+  --text-micro: 0.875rem;
+  --text-micro--line-height: 1.5;
+  --text-micro--letter-spacing: 0.005em;
   --text-micro--font-weight: 500;
+
+  /* Le chiffre de l'indice : la signature visuelle du produit. */
+  --text-indice: clamp(2.75rem, 14vw, 4rem);
+  --text-indice--line-height: 1;
+  --text-indice--letter-spacing: -0.03em;
+  --text-indice--font-weight: 600;
+
+  /* ── L'échelle Tailwind par défaut est redéfinie ──────────────────────
+     Ce n'est pas une coquetterie. Les composants antérieurs à la refonte
+     emploient `text-xs` et `text-sm` 141 fois au total : à 12 et 14 px,
+     c'est ce qui rendait le produit « minuscule » sur téléphone. Les
+     réécrire un par un aurait laissé passer des oublis ; redéfinir les
+     jetons corrige les 141 d'un coup, et les futurs avec.                */
+
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.6;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.65;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.55;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.4;
+  --text-2xl: clamp(1.375rem, 4.5vw, 1.75rem);
+  --text-2xl--line-height: 1.25;
+  --text-3xl: clamp(1.75rem, 6vw, 2.125rem);
+  --text-3xl--line-height: 1.2;
+  --text-4xl: clamp(2rem, 7.5vw, 2.5rem);
+  --text-4xl--line-height: 1.15;
 
   /* Rayons — le rayon encode le niveau, il n'est pas décoratif. */
   --radius-0: 0px;
@@ -95,7 +152,8 @@ html {
 body {
   margin: 0;
   background: var(--color-noir);
-  color: var(--color-craie);
+  /* Niveau « corps » par defaut : les titres portent explicitement craie. */
+  color: var(--color-texte);
   font-family: var(--font-corps);
   font-size: var(--text-corps);
   line-height: 1.6;

@@ -39,7 +39,7 @@ function renderContent(content: string) {
     } else if (trimmed.startsWith('- ')) {
       elements.push(
         <div key={i} className="flex items-start gap-2 ml-2 sm:ml-4 mb-1.5">
-          <span className="text-mesure mt-1.5 shrink-0 text-[8px]">●</span>
+          <span className="text-mesure mt-1.5 shrink-0 text-micro">●</span>
           <p className="text-sm sm:text-base text-brume leading-relaxed">{trimmed.substring(2)}</p>
         </div>
       );
@@ -87,7 +87,7 @@ function ArticleView({ categoryId, sectionIndex, subIndex, navigate }: Props) {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs sm:text-sm text-brume mb-6 sm:mb-8 flex-wrap">
+      <div className="flex items-center gap-2 text-xs sm:text-sm text-texte mb-6 sm:mb-8 flex-wrap">
         <button onClick={() => navigate({ type: 'knowledge' })} className="hover:text-craie transition-colors">
           Savoir
         </button>
