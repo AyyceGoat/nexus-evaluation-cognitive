@@ -34,7 +34,14 @@ export function PosterRobot({ className }: { className?: string }) {
         </linearGradient>
       </defs>
 
-      <g fill="none" stroke="var(--color-ardoise)" strokeWidth="1.5">
+      {/*
+        Trait principal en `brume` et non en `ardoise`.
+
+        `ardoise` (#2b2b2b) rend 1,5 contre 1 sur du noir : constaté sur capture,
+        le buste était une zone vide au milieu de la page. `brume` monte à 10,9 et,
+        ramenée à 0,75 d'opacité, reste un dessin plutôt qu'un contour dur.
+      */}
+      <g fill="none" stroke="var(--color-brume)" strokeWidth="2" strokeOpacity="0.75">
         {/* Épaules */}
         <path d="M40 372 C 40 300, 96 268, 160 268 C 224 268, 280 300, 280 372" />
         <path d="M74 372 C 74 320, 112 300, 160 300 C 208 300, 246 320, 246 372" />
@@ -52,8 +59,8 @@ export function PosterRobot({ className }: { className?: string }) {
 
       {/* Regard : deux fentes, pas des yeux — un robot, pas un personnage. */}
       <g fill="var(--color-mesure)">
-        <rect x="128" y="154" width="26" height="4" rx="2" opacity="0.85" />
-        <rect x="166" y="154" width="26" height="4" rx="2" opacity="0.85" />
+        <rect x="128" y="153" width="26" height="5" rx="2.5" />
+        <rect x="166" y="153" width="26" height="5" rx="2.5" />
       </g>
 
       {/* L'arête lumineuse court sur le sommet du crâne. */}
@@ -61,11 +68,11 @@ export function PosterRobot({ className }: { className?: string }) {
         d="M104 122 C 118 96, 138 86, 160 86 C 182 86, 202 96, 216 122"
         fill="none"
         stroke="url(#arete)"
-        strokeWidth="2"
+        strokeWidth="3"
       />
 
       {/* Plaques de mâchoire */}
-      <g fill="none" stroke="var(--color-ardoise)" strokeWidth="1.5">
+      <g fill="none" stroke="var(--color-brume)" strokeWidth="1.75" strokeOpacity="0.55">
         <path d="M124 190 H196" />
         <path d="M136 204 H184" />
       </g>
