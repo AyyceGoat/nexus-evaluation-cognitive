@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { backend } from '../lib/backend';
+import { backend, sessionProbable } from '../lib/backend';
 import type { Profil, Utilisateur } from '../lib/backend/types';
 import { CHEMINS } from './navigation';
 
@@ -23,6 +23,26 @@ interface EtatAuth {
 
 const ContexteAuth = createContext<EtatAuth | null>(null);
 
+/** Chemins qui ne peuvent rien afficher sans savoir qui est connecté. */
+const PREFIXES_AVEC_COMPTE = [
+  CHEMINS.tableauDeBord,
+  CHEMINS.profil,
+  CHEMINS.parametres,
+  CHEMINS.bienvenue,
+  CHEMINS.nouveauMotDePasse,
+  '/rapport',
+];
+
+function pageExigeantUnCompte(chemin: string): boolean {
+  return PREFIXES_AVEC_COMPTE.some((prefixe) => chemin.startsWith(prefixe));
+}
+
+/** Première interaction : c'est le moment où l'on peut avoir besoin d'un compte. */
+const EVENEMENTS = ['pointerdown', 'keydown', 'touchstart'] as const;
+
+/** Filet, si personne n'interagit. */
+const DELAI_CHARGEMENT_MS = 4000;
+
 export function FournisseurAuth({ children }: { children: ReactNode }) {
   const [chargement, setChargement] = useState(true);
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
@@ -34,29 +54,74 @@ export function FournisseurAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let annule = false;
+    let desabonner: (() => void) | null = null;
 
-    // Premier état connu, puis abonnement aux changements.
-    void (async () => {
-      const courant = await backend.utilisateurCourant();
-      if (annule) return;
-      setUtilisateur(courant);
-      if (courant) setProfil(await backend.lireProfil());
-      if (!annule) setChargement(false);
-    })();
+    const initialiser = () => {
+      // Premier état connu, puis abonnement aux changements.
+      void (async () => {
+        const courant = await backend.utilisateurCourant();
+        if (annule) return;
+        setUtilisateur(courant);
+        if (courant) setProfil(await backend.lireProfil());
+        if (!annule) setChargement(false);
+      })();
 
-    const desabonner = backend.surChangementAuth((suivant) => {
-      setUtilisateur(suivant);
-      setChargement(false);
-      if (suivant) {
-        void backend.lireProfil().then(setProfil);
-      } else {
-        setProfil(null);
-      }
-    });
+      desabonner = backend.surChangementAuth((suivant) => {
+        setUtilisateur(suivant);
+        setChargement(false);
+        if (suivant) {
+          void backend.lireProfil().then(setProfil);
+        } else {
+          setProfil(null);
+        }
+      });
+    };
+
+    // Un écran qui exige un compte a besoin de savoir tout de suite, comme
+    // quelqu'un dont un jeton est déjà stocké.
+    if (sessionProbable() || pageExigeantUnCompte(window.location.pathname)) {
+      initialiser();
+      return () => {
+        annule = true;
+        desabonner?.();
+      };
+    }
+
+    // Personne n'est connecté, et aucun écran ne l'exige : on l'affiche
+    // immédiatement, et la bibliothèque n'est chargée qu'à la première
+    // interaction. Un visiteur qui lit la landing ne la télécharge jamais.
+    //
+    // L'abonnement doit tout de même finir par exister : sans lui, une connexion
+    // réussie ne serait pas vue par cet état, et la route protégée renverrait
+    // aussitôt vers le formulaire. Se connecter demande d'interagir, donc
+    // l'abonnement est en place à temps ; le délai n'est qu'un filet.
+    setUtilisateur(null);
+    setProfil(null);
+    setChargement(false);
+
+    let fait = false;
+    // Déclaré avant `lancer`, qui s'en sert : une référence en zone morte
+    // temporelle passe inaperçue jusqu'au jour où l'ordre d'exécution change.
+    let minuteur = 0;
+
+    const lancer = () => {
+      if (fait || annule) return;
+      fait = true;
+      for (const nom of EVENEMENTS) window.removeEventListener(nom, lancer);
+      window.clearTimeout(minuteur);
+      initialiser();
+    };
+
+    for (const nom of EVENEMENTS) {
+      window.addEventListener(nom, lancer, { once: true, passive: true });
+    }
+    minuteur = window.setTimeout(lancer, DELAI_CHARGEMENT_MS);
 
     return () => {
       annule = true;
-      desabonner();
+      for (const nom of EVENEMENTS) window.removeEventListener(nom, lancer);
+      window.clearTimeout(minuteur);
+      desabonner?.();
     };
   }, []);
 

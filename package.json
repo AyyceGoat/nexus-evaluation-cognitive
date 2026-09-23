@@ -13,6 +13,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "verifie": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "verifie:auth": "node scripts/verifie-auth-differee.mjs",
     "verifie:contraste": "node scripts/contrast.mjs",
     "verifie:design": "node scripts/verifie-tokens.mjs",
     "verifie:lighthouse": "node scripts/lighthouse.mjs",

@@ -110,6 +110,32 @@ const portNonConfigure: BackendPort = {
   },
 };
 
+/**
+ * Indique si un jeton de session est déjà stocké dans ce navigateur.
+ *
+ * Sert à ne PAS charger `@supabase/supabase-js` pour un visiteur qui lit
+ * simplement la landing : la bibliothèque pèse 233 ko bruts, Realtime compris
+ * alors qu'on ne s'en sert pas, et son analyse bloquait le fil principal pendant
+ * 320 ms de plus — mesuré, la note de performance passait de 99 à 74.
+ *
+ * Se tromper ici ne coûte rien de grave : au pire, l'en-tête d'une personne
+ * connectée affiche brièvement l'état déconnecté. Aucune donnée, aucune
+ * autorisation n'en dépend — celles-ci vivent dans les politiques RLS.
+ */
+export function sessionProbable(): boolean {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const cle = localStorage.key(i);
+      if (cle && /^sb-.*-auth-token$/.test(cle)) return true;
+    }
+  } catch {
+    // Stockage inaccessible (navigation privée, cookies bloqués) : on suppose
+    // qu'il faut charger, plutôt que de laisser quelqu'un pour déconnecté.
+    return true;
+  }
+  return false;
+}
+
 let cache: BackendPort | null = null;
 let enCours: Promise<BackendPort> | null = null;
 
