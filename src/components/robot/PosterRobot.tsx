@@ -18,8 +18,11 @@
  */
 export function PosterRobot({ className }: { className?: string }) {
   return (
+    // Cadre resserré sur le dessin. Le tracé occupe x 40→280 et y 84→372 ;
+    // l'ancien cadre « 0 0 320 400 » laissait donc 28 % de hauteur vide, ce qui
+    // se lisait comme un trou entre le bouton d'appel et le buste.
     <svg
-      viewBox="0 0 320 400"
+      viewBox="32 76 256 304"
       className={className}
       role="img"
       aria-label="Buste robotique stylisé, de face"
@@ -37,7 +40,7 @@ export function PosterRobot({ className }: { className?: string }) {
       {/*
         Trait principal en `brume` et non en `ardoise`.
 
-        `ardoise` (#2b2b2b) rend 1,5 contre 1 sur du noir : constaté sur capture,
+        `ardoise` ne rend qu un contraste de 1,5 contre 1 sur du noir : constaté sur capture,
         le buste était une zone vide au milieu de la page. `brume` monte à 10,9 et,
         ramenée à 0,75 d'opacité, reste un dessin plutôt qu'un contour dur.
       */}
