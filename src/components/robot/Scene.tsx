@@ -21,39 +21,24 @@ interface Props {
 }
 
 /**
- * Cadence l'invalidation.
+ * Rend une image quand la scène est figée.
  *
- * Le canvas tourne en `frameloop="demand"` : rien n'est rendu sans qu'on le demande.
- * Ce composant demande une image à chaque rafraîchissement, sans plafond.
+ * En `frameloop="demand"`, rien n'est dessiné sans qu'on le demande : sous
+ * `prefers-reduced-motion` ou hors du viewport, il faut donc une invalidation
+ * explicite, sinon le canvas reste vide.
  *
- * Il y avait un plafond à 30 images par seconde, pour économiser la batterie. Mesuré,
- * le résultat était un suivi à 24 images par seconde : saccadé, et perçu comme lent.
- * L'économie ne valait pas ce prix — d'autant que la scène n'est plus servie sur
- * téléphone, où la batterie compte vraiment.
+ * ── Ce composant ne pilote plus la cadence ──
  *
- * Il ne demande rien du tout quand le canvas est hors du viewport, ni sous
- * `prefers-reduced-motion`. Dans ce dernier cas, une seule image est rendue : la pose
- * fixe.
+ * Il tenait auparavant sa propre boucle `requestAnimationFrame` appelant
+ * `invalidate()`, plafonnée à 30 images par seconde. Deux défauts mesurés :
+ * le plafond rendait le suivi saccadé, et cette boucle doublait celle de
+ * React Three Fiber — une passe de rendu pour deux images présentées. La
+ * bibliothèque pilote désormais sa propre boucle en `frameloop="always"`
+ * dès qu'il y a quelque chose à animer.
  */
-function Cadence({ actif }: { actif: boolean }) {
+function ImageFixe() {
   const invalidate = useThree((etat) => etat.invalidate);
-
-  useEffect(() => {
-    // Une image dans tous les cas, pour que la pose fixe s'affiche.
-    invalidate();
-    if (!actif) return;
-
-    let anime = 0;
-
-    const boucle = () => {
-      anime = requestAnimationFrame(boucle);
-      invalidate();
-    };
-
-    anime = requestAnimationFrame(boucle);
-    return () => cancelAnimationFrame(anime);
-  }, [actif, invalidate]);
-
+  useEffect(() => invalidate(), [invalidate]);
   return null;
 }
 
@@ -67,8 +52,9 @@ export default function Scene({ cible, capacites, visible, modelUrl }: Props) {
 
   return (
     <Canvas
-      // Rien n'est rendu sans invalidation explicite : c'est `Cadence` qui décide.
-      frameloop="demand"
+      // `always` quand ça bouge, `demand` quand c'est figé : la boucle de rendu
+      // n'existe que s'il y a un mouvement à produire.
+      frameloop={anime ? 'always' : 'demand'}
       dpr={capacites.dpr}
       camera={{ position: [0, 0.03, 3.2], fov: 32 }}
       gl={{
@@ -80,7 +66,7 @@ export default function Scene({ cible, capacites, visible, modelUrl }: Props) {
       // Le canvas est décoratif : le contenu informatif est dans le texte du hero.
       aria-hidden="true"
     >
-      <Cadence actif={anime} />
+      {!anime && <ImageFixe />}
 
       {/* Éclairage : trois sources, aucune de plus. L'arête lumineuse du modèle fait
           le reste du travail. */}
