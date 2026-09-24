@@ -141,6 +141,15 @@
   fetch('./manifeste.json', { cache: 'no-store' })
     .then(function (reponse) {
       if (!reponse.ok) throw new Error('manifeste absent (' + reponse.status + ')');
+
+      // Le type de contenu est vérifié avant l'analyse. La redirection
+      // d'application du site renvoie l'index HTML avec un statut 200 pour
+      // tout chemin inexistant : sans ce contrôle, la page essaierait
+      // d'analyser du HTML et afficherait une erreur de syntaxe JSON au lieu
+      // de dire simplement qu'aucun échantillon n'existe encore.
+      var type = reponse.headers.get('content-type') || '';
+      if (type.indexOf('json') === -1) throw new Error('manifeste pas encore genere');
+
       return reponse.json();
     })
     .then(function (manifeste) {
