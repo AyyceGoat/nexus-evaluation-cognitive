@@ -450,8 +450,11 @@ function Article({ sujet }: { sujet: ExtendedKnowledgeItem }) {
           <section key={section.titre} id={ancre(index)} className="scroll-mt-24">
             <h2 className="mb-3 font-titre text-t2 text-craie">{section.titre}</h2>
             <div className="flex flex-col gap-4">
-              {section.paragraphes.map((paragraphe) => (
-                <p key={paragraphe.slice(0, 48)} className="mesure-texte text-corps text-texte">
+              {/* Clé par position : la liste est statique, et une clé dérivée du
+                  texte casserait si deux paragraphes d'une même section
+                  commençaient pareil — ce qu'aucun contrôle ne garantit. */}
+              {section.paragraphes.map((paragraphe, rang) => (
+                <p key={rang} className="mesure-texte text-corps text-texte">
                   {paragraphe}
                 </p>
               ))}

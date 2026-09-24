@@ -248,6 +248,86 @@ try {
       erreurs.slice(avant).join(' | ').slice(0, 90)
     );
 
+    /* ── Lecture d'un article du Savoir ──────────────────────────────────
+       Le reste du parcours visite des pages et remplit des formulaires. Aucun
+       contrôle n'ouvrait un sujet du Savoir, alors que c'est le seul écran dont
+       le contenu est le produit : c'est là que la taille de lecture compte, et
+       là qu'un article vide ne se verrait pas autrement. */
+
+    await page.goto(`${BASE}/savoir`, { waitUntil: 'domcontentloaded' });
+    await new Promise((r) => setTimeout(r, 700));
+
+    const carte = await page.evaluate(() => {
+      const bouton = document.querySelector('main ul li button');
+      if (!bouton) return null;
+      const r = bouton.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2, titre: (bouton.textContent ?? '').trim().slice(0, 30) };
+    });
+
+    verifier('savoir : une carte de sujet est touchable', carte !== null, carte?.titre ?? '');
+
+    if (carte) {
+      // Amener la carte dans l'écran avant de la toucher : un tap hors viewport
+      // ne déclenche rien et donnerait un faux échec.
+      await page.evaluate(() => {
+        document.querySelector('main ul li button')?.scrollIntoView({ block: 'center' });
+      });
+      await new Promise((r) => setTimeout(r, 300));
+      const position = await page.evaluate(() => {
+        const r = document.querySelector('main ul li button').getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      await page.touchscreen.tap(position.x, position.y);
+      await new Promise((r) => setTimeout(r, 1200));
+
+      const article = await page.evaluate(() => {
+        const paragraphes = [...document.querySelectorAll('main section p')].filter(
+          (element) => (element.textContent ?? '').trim().length > 200
+        );
+        const tailles = paragraphes.map((element) =>
+          Number.parseFloat(getComputedStyle(element).fontSize)
+        );
+        return {
+          titre: document.querySelector('main h1')?.textContent?.trim().slice(0, 40) ?? '',
+          sommaire: document.querySelectorAll('nav[aria-label] ol li').length,
+          sections: document.querySelectorAll('main section h2').length,
+          paragraphes: paragraphes.length,
+          signes: paragraphes.reduce((n, element) => n + (element.textContent ?? '').length, 0),
+          taillePlusPetite: tailles.length > 0 ? Math.min(...tailles) : 0,
+          resume: [...document.querySelectorAll('main p')].some((element) =>
+            (element.textContent ?? '').includes('essentiel')
+          ),
+          largeurDocument: document.documentElement.scrollWidth,
+        };
+      });
+
+      verifier(
+        'savoir : le sommaire liste les sections de l’article',
+        article.sommaire >= 5 && article.sommaire === article.sections,
+        `${article.sommaire} entrée(s) pour ${article.sections} section(s)`
+      );
+
+      verifier(
+        'savoir : l’article est développé, pas un résumé',
+        article.paragraphes >= 10 && article.signes >= 4500,
+        `${article.paragraphes} paragraphes, ${article.signes} signes`
+      );
+
+      verifier(
+        'savoir : le corps de l’article n’est jamais sous 16 px',
+        article.taillePlusPetite >= 16,
+        `${article.taillePlusPetite} px`
+      );
+
+      verifier(
+        'savoir : l’article ne déborde pas en largeur',
+        article.largeurDocument <= appareil.largeur,
+        `${article.largeurDocument} px pour ${appareil.largeur}`
+      );
+
+      await page.screenshot({ path: `${SORTIE}/mobile-article-${appareil.largeur}.png`, fullPage: false });
+    }
+
     await page.screenshot({ path: `${SORTIE}/mobile-${appareil.largeur}.png`, fullPage: true });
 
     verifier(

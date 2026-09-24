@@ -13,7 +13,10 @@ import { launch } from 'puppeteer-core';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 
 const BASE = process.argv[2] ?? 'http://localhost:4232';
-const CHEMINS = (process.argv[3] ?? '/,/evaluation,/inscription').split(',');
+//  est dans la liste par defaut depuis que la bibliotheque porte 50
+// articles : c'est desormais la page la plus lourde en contenu, donc celle ou une
+// regression de performance se verrait d'abord.
+const CHEMINS = (process.argv[3] ?? '/,/evaluation,/savoir,/inscription').split(',');
 const SORTIE = 'verification';
 
 const CHEMINS_CHROME = [
