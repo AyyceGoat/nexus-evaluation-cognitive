@@ -101,21 +101,31 @@ const azure = {
         id: v.ShortName,
         nom: v.LocalName ?? v.DisplayName,
         genre: v.Gender === 'Female' ? 'féminine' : 'masculine',
-        // Azure signale les voix d'enfant, information décisive ici : une voix
-        // d'enfant ne convient pas pour narrer six minutes d'histoire.
-        age: (v.SecondaryLocaleList ? '' : '') || v.VoiceTag?.VoicePersonalities?.join(', ') || '',
+        // Ces quatre champs viennent tels quels de la réponse d'Azure. Une
+        // première version fabriquait un champ « âge » à partir d'une
+        // propriété qui ne le contient pas : mieux vaut n'afficher que ce que
+        // le service dit réellement, et laisser l'oreille juger du reste.
         styles: v.StyleList ?? [],
+        motsParMinute: v.WordsPerMinute ?? null,
+        type: v.VoiceType ?? '',
+        etat: v.Status ?? '',
         multilingue: /Multilingual/.test(v.ShortName),
       }))
       .sort((a, b) => a.genre.localeCompare(b.genre) || a.id.localeCompare(b.id));
   },
 
   /**
-   * Synthétise l'extrait avec une voix, et rend l'audio et les repères de mots.
+   * Synthétise l'extrait avec une voix.
    *
-   * Le format demandé est de l'AAC en conteneur MP4 : c'est le seul codec lu
-   * partout, Safari et iOS compris, alors qu'Opus dans un conteneur Ogg ne
-   * l'est pas de façon fiable.
+   * MP3 mono, et non Opus : Opus est deux fois plus léger, mais sa lecture
+   * dans un conteneur Ogg n'est pas fiable sur Safari et iOS — or la promesse
+   * est la même voix partout. L'AAC serait le meilleur compromis de poids,
+   * mais Azure ne le propose pas en sortie et le réencodage demanderait
+   * ffmpeg, absent de la machine de génération.
+   *
+   * Le débit est ici plus élevé que celui retenu pour la production (96 contre
+   * 48 kb/s) : pour juger d'un timbre, il ne faut pas que la compression
+   * s'ajoute au jugement.
    */
   async synthetiser(voix) {
     const region = env.AZURE_SPEECH_REGION;
@@ -236,8 +246,10 @@ try {
 const voix = await adaptateur.voix();
 console.log(`${voix.length} voix francaises proposees par le service :`);
 for (const v of voix) {
+  const cadence = v.motsParMinute ? `${v.motsParMinute} mots/min` : '';
   console.log(
-    `  ${v.id.padEnd(38)} ${v.genre.padEnd(10)} ${v.multilingue ? 'multilingue' : '          '} ${v.styles.slice(0, 3).join(', ')}`
+    `  ${v.id.padEnd(38)} ${v.genre.padEnd(10)} ${(v.multilingue ? 'multilingue' : '').padEnd(12)} ` +
+      `${cadence.padEnd(14)} ${(v.styles ?? []).slice(0, 3).join(', ')}`
   );
 }
 console.log('');

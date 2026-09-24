@@ -105,7 +105,7 @@
         bandeau.appendChild(nom);
 
         if (v.multilingue) bandeau.appendChild(etiquette('multilingue', true));
-        if (v.age) bandeau.appendChild(etiquette(v.age));
+        if (v.motsParMinute) bandeau.appendChild(etiquette(v.motsParMinute + ' mots/min'));
         (v.styles || []).slice(0, 3).forEach(function (style) {
           if (style) bandeau.appendChild(etiquette(style));
         });
