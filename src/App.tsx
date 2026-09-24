@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { configurationManquante } from './lib/backend';
 import { useAuth } from './app/auth';
 import { CHEMINS, useNavigatePage } from './app/navigation';
+import { prechargerOngletsAuRepos, prechargerRoute } from './app/prechargement';
 import { Button } from './components/ui/Button';
 
 export type { Page } from './app/navigation';
@@ -35,6 +36,14 @@ export default function App() {
   // vers lequel on vient de naviguer.
   useEffect(() => setMenuOuvert(false), [emplacement.pathname]);
 
+  // Precharge les modules d'onglet pendant un temps mort.
+  //
+  // Mesure a l'appui : sans cela, le premier passage sur un onglet coutait 263
+  // a 442 ms en 4G bridee, presque entierement passes a attendre le module. Le
+  // detail du compromis — et pourquoi le prechargement est ecarte sur reseau
+  // econome — est dans `app/prechargement.ts`.
+  useEffect(() => prechargerOngletsAuRepos(), []);
+
   useEffect(() => {
     const onKeyDown = (evenement: KeyboardEvent) => {
       if ((evenement.ctrlKey || evenement.metaKey) && evenement.key.toLowerCase() === 'k') {
@@ -45,6 +54,19 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  /**
+   * Gestes qui annoncent un clic, et qui declenchent le prechargement.
+   *
+   * `onPointerDown` couvre le tactile : il precede le `click` de plusieurs
+   * dizaines de millisecondes, ce qui suffit a entamer la requete. `onMouseEnter`
+   * donne bien plus d'avance a la souris, et `onFocus` traite le clavier.
+   */
+  const gestesPrechargement = (chemin: string) => ({
+    onMouseEnter: () => prechargerRoute(chemin),
+    onFocus: () => prechargerRoute(chemin),
+    onPointerDown: () => prechargerRoute(chemin),
+  });
 
   const classeLien = ({ isActive }: { isActive: boolean }) =>
     `flex min-h-11 items-center rounded-1 px-3 text-petit transition-colors ${
@@ -85,7 +107,11 @@ export default function App() {
             <ul className="hidden items-center gap-1 lg:flex">
               {LIENS_PUBLICS.map((lien) => (
                 <li key={lien.to}>
-                  <NavLink to={lien.to} className={classeLien}>
+                  <NavLink
+                    to={lien.to}
+                    className={classeLien}
+                    {...gestesPrechargement(lien.to)}
+                  >
                     {lien.libelle}
                   </NavLink>
                 </li>
@@ -120,7 +146,12 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={() => setMenuOuvert(!menuOuvert)}
+                onClick={() => {
+                  // Ouvrir le menu annonce un changement d'onglet : les cinq
+                  // modules partent des maintenant, pendant qu'on lit la liste.
+                  if (!menuOuvert) for (const lien of LIENS_PUBLICS) prechargerRoute(lien.to);
+                  setMenuOuvert(!menuOuvert);
+                }}
                 aria-expanded={menuOuvert}
                 aria-controls="menu-mobile"
                 aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
@@ -139,7 +170,11 @@ export default function App() {
             <ul id="menu-mobile" className="border-t border-ardoise py-2 lg:hidden">
               {LIENS_PUBLICS.map((lien) => (
                 <li key={lien.to}>
-                  <NavLink to={lien.to} className={classeLien}>
+                  <NavLink
+                    to={lien.to}
+                    className={classeLien}
+                    {...gestesPrechargement(lien.to)}
+                  >
                     {lien.libelle}
                   </NavLink>
                 </li>
@@ -188,6 +223,7 @@ export default function App() {
                   <Link
                     to={lien.to}
                     className="flex min-h-11 items-center rounded-1 text-petit text-texte transition-colors hover:text-craie"
+                    {...gestesPrechargement(lien.to)}
                   >
                     {lien.libelle}
                   </Link>

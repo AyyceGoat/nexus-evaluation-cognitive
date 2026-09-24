@@ -1,10 +1,39 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { countries, continents } from '../data/countries';
+
+/**
+ * Nombre de pays rendus d'emblee, puis ajoutes a chaque extension.
+ *
+ * ── Pourquoi ne pas tout rendre ──
+ *
+ * Mesure du passage d'un onglet a l'autre (`npm run verifie:navigation`),
+ * telephone a 390 px, 4G bridee, processeur x4 :
+ *
+ *   retour sur l'onglet Pays : 531 ms, jusqu'a 587
+ *
+ * Le module est en cache : ce temps est entierement passe a mettre en page et
+ * peindre 195 cartes, dont trois ou quatre tiennent a l'ecran.
+ *
+ * ── Pourquoi pas `content-visibility: auto` ──
+ *
+ * Essaye et mesure. La propriete ameliore bien le remontage (531 -> 353 ms),
+ * mais elle degrade le PREMIER affichage : 461 -> 916 ms, de maniere
+ * reproductible sur trois passes. Mettre 195 elements sous observation de
+ * visibilite a un cout d'installation, paye au premier rendu, qui depasse ici
+ * ce qu'il fait economiser. Elle reste employee sur la grille du Savoir, ou
+ * cinquante cartes rendent l'arbitrage inverse (315 -> 146 ms sans penalite).
+ *
+ * Le rendu progressif, lui, supprime le travail au lieu de le differer : les
+ * cartes qui ne sont pas rendues ne coutent rien du tout.
+ */
+const PAR_PAGE = 48;
 
 function CountriesExplorer() {
   const [search, setSearch] = useState('');
   const [selectedContinent, setSelectedContinent] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [limite, setLimite] = useState(PAR_PAGE);
+  const sentinelle = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
     return countries.filter(c => {
@@ -15,6 +44,36 @@ function CountriesExplorer() {
       return matchSearch && matchContinent;
     });
   }, [search, selectedContinent]);
+
+  // Un changement de filtre repart du debut : garder une limite haute ferait
+  // rendre 195 cartes des qu'on a fait defiler une fois.
+  useEffect(() => setLimite(PAR_PAGE), [search, selectedContinent]);
+
+  const visibles = useMemo(() => filtered.slice(0, limite), [filtered, limite]);
+  const reste = filtered.length - visibles.length;
+
+  /**
+   * Extension automatique quand la sentinelle approche de l'ecran.
+   *
+   * Le bouton « afficher les suivants » reste present et fonctionnel : c'est
+   * lui qui sert au clavier, et il prend le relais si l'observateur n'est pas
+   * disponible. L'observateur ne fait que l'actionner a l'avance.
+   */
+  useEffect(() => {
+    const cible = sentinelle.current;
+    if (!cible || reste <= 0 || typeof IntersectionObserver === 'undefined') return;
+
+    const observateur = new IntersectionObserver(
+      (entrees) => {
+        if (entrees.some((e) => e.isIntersecting)) setLimite((n) => n + PAR_PAGE);
+      },
+      // Declenche avant d'arriver au bas de la liste, pour que l'ajout soit
+      // deja fait quand on y parvient.
+      { rootMargin: '600px 0px' }
+    );
+    observateur.observe(cible);
+    return () => observateur.disconnect();
+  }, [reste]);
 
   const country = selectedCountry ? countries.find(c => c.name === selectedCountry) : null;
 
@@ -138,14 +197,15 @@ function CountriesExplorer() {
 
       {/* Count & View Toggle */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <p className="text-xs text-brume">
+        <p className="text-micro text-brume">
           {filtered.length} pays trouvé{filtered.length > 1 ? 's' : ''}
+          {reste > 0 && <> — {visibles.length} affichés</>}
         </p>
       </div>
 
       {/* Countries Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {filtered.map((c) => (
+        {visibles.map((c) => (
           <button
             key={c.name}
             onClick={() => setSelectedCountry(c.name)}
@@ -155,7 +215,10 @@ function CountriesExplorer() {
               src={`https://flagcdn.com/w80/${c.flagCode}.png`}
               alt={`Drapeau ${c.name}`}
               className="w-12 sm:w-14 h-8 sm:h-9 rounded object-cover border border-ardoise shrink-0"
+              width={80}
+              height={53}
               loading="lazy"
+              decoding="async"
             />
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold group-hover:text-mesure transition-colors truncate">{c.name}</h2>
@@ -164,6 +227,19 @@ function CountriesExplorer() {
           </button>
         ))}
       </div>
+
+      {reste > 0 && (
+        <div ref={sentinelle} className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setLimite((n) => n + PAR_PAGE)}
+            className="min-h-11 rounded-1 border border-ardoise bg-graphite px-5 text-petit text-texte transition-colors hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure"
+          >
+            Afficher {Math.min(PAR_PAGE, reste)} pays de plus
+            <span className="sr-only"> (il en reste {reste})</span>
+          </button>
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <div className="text-center py-16">
