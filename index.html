@@ -77,16 +77,15 @@
          Écran de lancement
 
          Peint par le navigateur AVANT que le moindre JavaScript soit analysé :
-         les styles sont en ligne et la marque est du texte, donc rien à
-         télécharger. Il remplace l'écran noir qu'on voyait jusqu'au premier
-         rendu de React.
+         styles en ligne, marque en texte, jauge en CSS. Rien à télécharger, donc
+         visible dès la première peinture.
 
-         Position fixe : il se superpose, donc il ne décale aucune mise en page
-         et le décalage cumulé reste nul.
+         La jauge est alimentée par `/lancement.js`, qui compte les octets
+         réellement reçus et les jalons d'amorçage de l'application. Elle
+         n'avance pas sur une minuterie : quand le réseau ne rend rien, elle
+         reste où elle est, et c'est l'honnêteté du chiffre.
 
-         Il est retiré par `src/main.tsx` après le premier rendu, et non par un
-         script en ligne : la politique de sécurité du contenu interdit
-         `script-src 'unsafe-inline'`, et ce n'est pas elle qu'il faut plier.
+         Position fixe : il se superpose, donc aucun décalage de mise en page.
          ══════════════════════════════════════════════════════════════════ -->
     <style>
       #lancement {
@@ -94,72 +93,145 @@
         inset: 0;
         z-index: 9999;
         display: grid;
-        place-items: center;
-        align-content: center;
-        gap: 1.75rem;
-        background: #000;
-        transition: opacity 280ms cubic-bezier(0.2, 0, 0, 1);
+        place-content: center;
+        justify-items: center;
+        gap: 2rem;
+        padding: 2rem;
+        background:
+          radial-gradient(120% 90% at 50% 12%, #101614 0%, #000 62%),
+          #000;
+        transition: opacity 320ms cubic-bezier(0.2, 0, 0, 1);
       }
       #lancement[data-parti] {
         opacity: 0;
         pointer-events: none;
       }
+
+      #lancement .signe {
+        display: grid;
+        place-items: center;
+        gap: 0.9rem;
+        animation: lancement-entree 520ms cubic-bezier(0.2, 0, 0, 1) both;
+      }
+
+      /* Trait d'accent au-dessus de la marque : le seul ornement, et il bouge
+         à l'entrée, pas en boucle. */
+      #lancement .arete {
+        width: 3.25rem;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #6ed8c6, transparent);
+        transform-origin: center;
+        animation: lancement-arete 760ms cubic-bezier(0.2, 0, 0, 1) both;
+      }
+
       #lancement .marque {
-        font-family: system-ui, -apple-system, sans-serif;
-        font-size: clamp(1.5rem, 7vw, 2rem);
-        font-weight: 600;
-        letter-spacing: 0.22em;
-        color: #f7f6f3;
         margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: clamp(1.625rem, 8vw, 2.25rem);
+        font-weight: 600;
+        letter-spacing: 0.26em;
+        text-indent: 0.26em;
+        color: #f7f6f3;
+      }
+
+      #lancement .sous {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 1rem;
+        line-height: 1.5;
+        text-align: center;
+        color: #bebab2;
+        max-width: 22rem;
+      }
+
+      #lancement .jauge {
+        display: grid;
+        gap: 0.65rem;
+        justify-items: center;
+        width: min(17rem, 68vw);
+        animation: lancement-entree 520ms 120ms cubic-bezier(0.2, 0, 0, 1) both;
       }
       #lancement .piste {
-        width: min(13.75rem, 52vw);
-        height: 2px;
+        width: 100%;
+        height: 3px;
+        border-radius: 2px;
         background: #2b2b2b;
         overflow: hidden;
       }
-      #lancement .piste span {
+      #lancement .piste > span {
         display: block;
         height: 100%;
-        width: 40%;
+        width: 6%;
+        border-radius: 2px;
         background: #6ed8c6;
-        animation: lancement-defile 1.05s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        /* La largeur est pilotée par le script ; la transition la rend continue
+           entre deux relevés, sans jamais devancer la mesure. */
+        transition: width 260ms cubic-bezier(0.2, 0, 0, 1);
       }
-      @keyframes lancement-defile {
+      #lancement .compte {
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 0.875rem;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        color: #bebab2;
+      }
+
+      @keyframes lancement-entree {
         from {
-          transform: translateX(-110%);
+          opacity: 0;
+          transform: translateY(10px);
         }
         to {
-          transform: translateX(320%);
+          opacity: 1;
+          transform: none;
         }
       }
-      /* Une barre qui défile est une animation : quelqu'un qui en demande moins
-         obtient une barre pleine, immobile. */
-      @media (prefers-reduced-motion: reduce) {
-        #lancement .piste span {
-          animation: none;
-          width: 100%;
+      @keyframes lancement-arete {
+        from {
+          opacity: 0;
+          transform: scaleX(0.2);
         }
-        #lancement {
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* Qui demande moins d'animation obtient un écran fixe : la jauge reste
+         mesurée, elle n'est simplement plus animée. */
+      @media (prefers-reduced-motion: reduce) {
+        #lancement,
+        #lancement .signe,
+        #lancement .arete,
+        #lancement .jauge,
+        #lancement .piste > span {
+          animation: none;
           transition: none;
         }
       }
     </style>
+    <script src="/lancement.js" defer></script>
   </head>
   <body>
-    <div id="lancement" role="status">
-      <p class="marque">NEXUS</p>
-      <div class="piste" aria-hidden="true"><span></span></div>
-      <span
-        style="
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          overflow: hidden;
-          clip-path: inset(50%);
-        "
-        >Chargement de l’application</span
-      >
+    <div
+      id="lancement"
+      role="progressbar"
+      aria-label="Chargement de NEXUS"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      data-poids="0"
+    >
+      <div class="signe">
+        <div class="arete" aria-hidden="true"></div>
+        <p class="marque">NEXUS</p>
+        <p class="sous">Évaluation des aptitudes cognitives, avec la marge d’erreur.</p>
+      </div>
+
+      <div class="jauge">
+        <div class="piste" aria-hidden="true"><span data-remplissage></span></div>
+        <span class="compte" data-pourcentage>0 %</span>
+      </div>
     </div>
 
     <div id="root"></div>

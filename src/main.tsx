@@ -44,27 +44,24 @@ const Parametres = lazy(() => import('./pages/compte').then((m) => ({ default: m
 const NonTrouve = lazy(() => import('./pages/compte').then((m) => ({ default: m.NonTrouve })));
 
 /**
- * Retire l'écran de lancement, une fois l'application réellement peinte.
+ * Jalons d'amorçage, signalés à l'écran de lancement.
  *
- * Deux images d'attente et non zéro : `render` ne fait qu'ordonnancer le travail.
- * Retirer l'écran dans la foulée découvrirait une page encore vide — on aurait
+ * La jauge avance sur deux sources : les octets reçus, relevés par
+ * `public/lancement.js`, et ces jalons. Ils sont signalés au moment où l'étape est
+ * réellement franchie, jamais par anticipation.
+ *
+ * `terminer()` attend deux images : `render` ne fait qu'ordonnancer le travail, et
+ * retirer l'écran dans la foulée découvrirait une page encore vide. On aurait
  * remplacé un écran noir par un clignotement, ce qui est pire.
- *
- * `prefers-reduced-motion` supprime la transition côté CSS ; ici on attend tout de
- * même la fin de la durée nominale, ce qui ne coûte rien et évite un cas
- * particulier de plus.
  */
-function retirerEcranDeLancement(): void {
-  const ecran = document.getElementById('lancement');
-  if (!ecran) return;
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      ecran.dataset.parti = '';
-      window.setTimeout(() => ecran.remove(), 320);
-    });
-  });
+interface Lancement {
+  jalon(nom: 'module' | 'racine' | 'peint'): void;
+  terminer(): void;
 }
+
+const lancement = (window as unknown as { __lancement?: Lancement }).__lancement;
+
+lancement?.jalon('module');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -173,4 +170,9 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>
 );
 
-retirerEcranDeLancement();
+lancement?.jalon('racine');
+
+requestAnimationFrame(() => {
+  lancement?.jalon('peint');
+  requestAnimationFrame(() => lancement?.terminer());
+});
