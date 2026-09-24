@@ -155,6 +155,43 @@ réponse qu'après la clôture.
 | Figurer au classement avec un compte anonyme | fonction serveur : adresse non confirmée |
 | Publier une passation au score refusé | fonction serveur |
 
+### 2.4 bis Publication au classement — deux défauts corrigés le 24 septembre 2026
+
+Les deux sont des défauts de **cohérence**, non de confidentialité : rien ne fuitait,
+rien ne pouvait être écrit indûment. Ils sont consignés ici parce qu'un système qui
+répond « c'est fait » sans avoir rien fait est un problème de sécurité au sens large —
+l'utilisateur ne peut plus se fier à ce que l'interface lui dit.
+
+**Succès silencieux de `definir_visibilite_classement`.** La fonction posait
+`classement_visible = true`, puis exécutait un `insert … select` sur la passation la
+plus récente exploitable. Sans passation éligible, ce `select` ne rend aucune ligne :
+l'`insert` n'insérait rien, aucune erreur n'était levée, la fonction rendait `void`, et
+le client concluait au succès. Le consentement était enregistré, la publication non.
+
+Correction : la condition d'éligibilité est vérifiée **avant** toute écriture et lève
+une exception nommée, ce qui annule l'appel en entier — `classement_visible` reste donc
+à sa valeur d'avant. Un `get diagnostics` contrôle ensuite le nombre de lignes écrites,
+en ceinture. La condition est écrite une seule fois, dans
+`public.a_une_passation_publiable()`, pour que le refus et la publication ne puissent
+pas se désaccorder au fil des évolutions.
+
+**Privilège implicite de `PUBLIC` sur la nouvelle fonction.** PostgreSQL accorde
+`EXECUTE` à `PUBLIC` sur toute fonction nouvellement créée : le `grant execute … to
+authenticated` qui accompagnait `a_une_passation_publiable()` ne refermait donc rien, et
+`anon` pouvait l'appeler. Sans session, `auth.uid()` est nul et la fonction rend `false`,
+donc rien ne fuitait — mais une fonction appelable par qui n'en a pas l'usage est une
+surface qu'on ne garde pas. Les trois autres fonctions du schéma appliquaient déjà le
+`revoke all … from public, anon` ; celle-ci l'avait manqué.
+
+Trouvé par `scripts/verifie-classement.mjs`, et non par relecture : le script attendait
+un refus et a obtenu `false`.
+
+| Tentative | Refus par |
+|---|---|
+| Se rendre visible sans passation exploitable | fonction serveur : exception, appel annulé |
+| Appeler `a_une_passation_publiable()` sans compte | `revoke all … from public, anon` |
+| Lire `classement.user_id` | privilège de colonne |
+
 ### 2.5 Rejouer, forger, injecter
 
 | Tentative | Résultat |
@@ -220,6 +257,19 @@ bloqués. Le défaut a été trouvé avant le déploiement, pas après.
 | Dérive du corrigé serveur | qu'un index de bonne réponse décalé fausse tous les scores |
 
 ---
+
+### 3 bis Contrôles ajoutés le 24 septembre 2026
+
+`scripts/verifie-classement.mjs` — dix contrôles, avec la seule clé publique, donc
+exécutables sans la clé de service et après n'importe quelle rotation de secrets :
+
+- `v_classement` lisible sans compte, et `classement.user_id` refusé par le moteur ;
+- `definir_visibilite_classement` et `a_une_passation_publiable` refusées à `anon` ;
+- ouverture d'une session anonyme, et vérification qu'elle est bien marquée comme telle ;
+- `a_une_passation_publiable()` rend `false` sans passation ;
+- visibilité refusée à une adresse non confirmée ;
+- le refus ne laisse **aucune trace** dans le profil — c'est le contrôle qui atteste que
+  l'exception annule bien l'appel en entier.
 
 ## 4. Ce qui reste faible, et pourquoi
 

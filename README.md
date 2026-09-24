@@ -2,7 +2,10 @@
 
 Plateforme web d'évaluation des aptitudes cognitives. Une passation de 35 questions
 produit un indice estimé, son intervalle de confiance à 95 %, un profil sur cinq
-aptitudes et un centile dont la population de référence est nommée.
+aptitudes et un centile dont la population de référence est nommée. Le résultat est
+restitué en français courant — combien de personnes sur cent font mieux, dans quelle
+plage se situe le niveau, ce qui ressort et ce qui demande plus d'effort — les chiffres
+techniques restant accessibles dans un repli.
 
 Le parti pris du produit est la mesure honnête : lorsque les réponses ne se distinguent
 pas statistiquement d'un tirage au hasard, aucun score n'est affiché.
@@ -99,6 +102,10 @@ paramètres (IRT 3PL), et non sur un total de bonnes réponses.
 - **195 pays** avec fiches détaillées et exploration filtrable.
 - **465 questions de quiz** réparties sur neuf catégories (art, astronomie, géographie,
   histoire, mythologie, philosophie, religion, science, technologie).
+- **Bibliothèque du savoir** de 50 sujets répartis en cinq domaines, à deux niveaux : un
+  résumé pour décider si l'on lit, puis un article développé en sections titrées dont
+  l'écran tire un sommaire. 43 150 mots au total, médiane de 848 mots par article. Les
+  articles sont chargés par domaine à la demande, avec cache en mémoire.
 - **Base de savoir** de neuf catégories et 48 sections, avec lecture d'articles.
 - **Recherche transverse** accessible au clavier par `Ctrl/⌘ + K`.
 
@@ -190,6 +197,9 @@ détaillés pas à pas dans [`docs/SUPABASE.md`](docs/SUPABASE.md).
 | `npm run verifie:seed` | Vérifie que le corrigé serveur correspond à la banque d'items |
 | `npm run verifie:schema` | Contrôle le schéma appliqué : tables, banque, fonctions serveur |
 | `npm run verifie:auth` | Vérifie le chargement différé de l'authentification |
+| `npm run verifie:savoir` | Substance des articles : sections, longueurs, temps de lecture |
+| `npm run verifie:classement` | Règles de publication au classement, avec la seule clé publique |
+| `npm run verifie:navigation` | Chronomètre le passage d'un onglet à l'autre, réseau bridé |
 
 ---
 
@@ -207,6 +217,8 @@ src/
 │   ├── iq/              Banque de 120 items, répartie par aptitude
 │   ├── countries.ts     195 pays
 │   ├── knowledge.ts     Base de savoir
+│   ├── knowledgeExtended.ts  Métadonnées et résumés des 50 sujets
+│   ├── savoir/          Articles développés, un module par domaine
 │   └── quiz.ts          465 questions
 ├── lib/
 │   ├── backend/         Port d'accès aux données, implémentation Supabase
