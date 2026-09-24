@@ -60,7 +60,8 @@ export function IntervalBar({ scaled, min = 55, max = 145, className }: Interval
       </div>
 
       <p className="text-micro text-brume">
-        Intervalle de confiance à 95 %. La marge fait partie du résultat.
+        La barre est la plage dans laquelle se situe le résultat ; le trait, la valeur la
+        plus probable. Intervalle de confiance à 95 % : la marge fait partie du résultat.
       </p>
     </div>
   );

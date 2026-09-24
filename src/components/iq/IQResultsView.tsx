@@ -4,6 +4,7 @@ import { IntervalBar } from './IntervalBar';
 import { IQCertificate } from './IQCertificate';
 import { MatrixRenderer } from './MatrixRenderer';
 import { APTITUDE_LABEL } from '../../lib/iq/types';
+import { lectureClaire } from '../../lib/iq/langageClair';
 import type { IQReport } from '../../lib/iq/types';
 import type { CorrectionServeur, QuestionServeur } from '../../lib/backend';
 import { AlertTriangle, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
@@ -36,6 +37,7 @@ export function IQResultsView({
   const itemsById = new Map(questions.map((question) => [question.id, question]));
   const corrigeById = new Map(corrections.map((c) => [c.itemId, c]));
   const interpretable = report.validity.verdict !== 'not_interpretable';
+  const lecture = lectureClaire(report);
 
   // ── Profil inexploitable : on n'affiche aucun score ────────────────────────
   if (!interpretable) {
@@ -82,29 +84,78 @@ export function IQResultsView({
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 text-craie">
-      <h1 className="font-titre text-2xl sm:text-4xl font-bold mb-8">Votre résultat</h1>
+      <h1 className="font-titre text-t1 mb-6">Votre résultat</h1>
 
-      {/* ── Score, intervalle, percentile ───────────────────────────────────── */}
-      <section className="p-6 sm:p-8 rounded-2 bg-graphite border border-ardoise mb-6">
-        <p className="text-micro text-brume mb-4">Indice estimé</p>
+      {/* ── Lecture principale, en français courant ─────────────────────────
+          Ce bloc disait : « Vous vous situez au 60ᵉ centile », sous un indice
+          et la mention « intervalle de confiance à 95 % ». Exact, et illisible
+          pour qui n'a pas fait de statistiques. Les chiffres n'ont pas disparu :
+          ils sont dans le repli « Détail technique », plus bas. La formulation
+          vient de `lib/iq/langageClair.ts`, qui est testé. */}
+      <section className="mb-6 rounded-2 border border-ardoise bg-graphite p-6 sm:p-8">
+        <h2 className="mb-4 text-t3 text-craie">Ce que dit votre résultat</h2>
 
-        <IntervalBar scaled={report.scaled} />
-
-        {report.percentile !== null && (
-          <p className="text-petit text-craie mt-6 pt-6 border-t border-ardoise">
-            Vous vous situez au <strong className="nombres">{report.percentile}ᵉ</strong> centile,{' '}
-            <span className="text-brume">{report.norm.label}.</span>
-          </p>
-        )}
+        <div className="flex flex-col gap-4">
+          {lecture.situation && (
+            <p className="mesure-texte text-corps text-craie">{lecture.situation}</p>
+          )}
+          <p className="mesure-texte text-corps text-texte">{lecture.precision}</p>
+          {lecture.forces && (
+            <p className="mesure-texte text-corps text-texte">{lecture.forces}</p>
+          )}
+          {lecture.difficultes && (
+            <p className="mesure-texte text-corps text-texte">{lecture.difficultes}</p>
+          )}
+          {lecture.profilPlat && (
+            <p className="mesure-texte text-corps text-texte">{lecture.profilPlat}</p>
+          )}
+        </div>
 
         {report.validity.message && (
-          <p className="mt-4 border-l-2 border-mesure pl-4 text-petit text-texte leading-relaxed">
+          <p className="mesure-texte mt-5 border-l-2 border-mesure pl-4 text-petit text-texte">
             {report.validity.message}
           </p>
         )}
       </section>
 
-      <p className="text-petit text-texte leading-relaxed mb-8 max-w-prose">
+      {/* ── Détail technique ────────────────────────────────────────────────
+          Replié par défaut, et complet : l'indice, sa plage, le centile et le
+          référentiel exact. Replier n'est pas cacher — c'est cesser d'imposer à
+          tout le monde un vocabulaire qui n'intéresse qu'une partie des
+          lecteurs. */}
+      <details className="mb-8 rounded-2 border border-ardoise/60 bg-graphite/40">
+        <summary className="flex min-h-11 cursor-pointer items-center px-5 text-petit text-texte transition-colors hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mesure">
+          Détail technique
+        </summary>
+
+        <div className="border-t border-ardoise/50 p-5 sm:p-6">
+          <p className="text-micro text-brume">Indice estimé</p>
+          <div className="mt-3">
+            <IntervalBar scaled={report.scaled} />
+          </div>
+
+          <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-ardoise/50 pt-6 text-micro">
+            <div>
+              <dt className="text-brume">Centile</dt>
+              <dd className="nombres mt-0.5 text-craie">
+                {report.percentile === null ? '—' : `${report.percentile}ᵉ`}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-brume">Bonnes réponses</dt>
+              <dd className="nombres mt-0.5 text-craie">
+                {report.correctCount} sur {report.itemCount}
+              </dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-brume">Référentiel de comparaison</dt>
+              <dd className="mt-0.5 text-craie">{report.norm.label}</dd>
+            </div>
+          </dl>
+        </div>
+      </details>
+
+      <p className="mesure-texte mb-8 text-petit text-texte">
         Cette évaluation est un outil d’entraînement et d’auto-évaluation. Elle ne constitue pas
         un diagnostic psychologique et ne remplace pas un bilan conduit par un psychologue.
       </p>

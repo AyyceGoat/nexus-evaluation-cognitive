@@ -33,7 +33,7 @@ function HomePage() {
 
           <p className="mesure-texte text-corps text-texte">
             {DEFAULT_SESSION_LENGTH} questions, environ 25 minutes. Vous obtenez un indice
-            estimé, son intervalle de confiance, et un profil sur cinq aptitudes. Gratuit,
+            estimé, la marge dans laquelle il se situe, et un profil sur cinq aptitudes. Gratuit,
             sans compte.
           </p>
 
@@ -82,10 +82,11 @@ function HomePage() {
             </p>
           </Promesse>
 
-          <Promesse titre="Un centile situé">
+          <Promesse titre="Un résultat expliqué en français">
             <p className="text-petit text-texte">
-              La population de référence est nommée en toutes lettres, pour que vous
-              sachiez à qui vous êtes comparé.
+              Combien de personnes sur cent font mieux, combien font moins bien, et à qui
+              vous êtes comparé — dit en clair. Les chiffres techniques restent
+              disponibles, dans un repli.
             </p>
           </Promesse>
         </div>
