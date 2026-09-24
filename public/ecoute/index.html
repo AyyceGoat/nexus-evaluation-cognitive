@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>NEXUS — Écoute des voix</title>
+    <!--
+      Page de travail, pas une page du produit : elle sert à choisir la voix de
+      la lecture à voix haute, et `noindex` l'exclut des moteurs.
+
+      Styles en ligne, script dans un fichier séparé : la politique de sécurité
+      du site autorise `style-src 'unsafe-inline'` mais pas `script-src`.
+    -->
+    <style>
+      :root {
+        --noir: #181818;
+        --graphite: #202020;
+        --ardoise: #2b2b2b;
+        --craie: #f7f6f3;
+        --texte: #e4e1db;
+        --brume: #bebab2;
+        --mesure: #6ed8c6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2rem 1rem 4rem;
+        background: var(--noir);
+        color: var(--texte);
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 1.0625rem;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 46rem;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: clamp(1.625rem, 6vw, 2.25rem);
+        color: var(--craie);
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        margin: 2.5rem 0 1rem;
+        font-size: 1.3125rem;
+        color: var(--craie);
+      }
+      p {
+        max-width: 34rem;
+      }
+      .sous {
+        color: var(--brume);
+      }
+      .extrait {
+        margin: 1.5rem 0;
+        padding: 1.25rem;
+        border-left: 2px solid var(--mesure);
+        background: var(--graphite);
+        border-radius: 0.5rem;
+      }
+      .extrait p {
+        margin: 0 0 0.75rem;
+        color: var(--craie);
+      }
+      .extrait p:last-child {
+        margin-bottom: 0;
+      }
+      details {
+        margin: 1rem 0 0;
+        border: 1px solid var(--ardoise);
+        border-radius: 0.5rem;
+        background: rgba(43, 43, 43, 0.4);
+      }
+      summary {
+        padding: 0.75rem 1rem;
+        min-height: 2.75rem;
+        cursor: pointer;
+        color: var(--texte);
+      }
+      details > div {
+        padding: 0 1rem 1rem;
+        color: var(--brume);
+        font-size: 1rem;
+      }
+      .voix {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .voix li {
+        padding: 1rem;
+        border: 1px solid var(--ardoise);
+        border-radius: 0.5rem;
+        background: var(--graphite);
+      }
+      .entete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.5rem 0.75rem;
+        margin-bottom: 0.75rem;
+      }
+      .nom {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        color: var(--craie);
+      }
+      .etiquette {
+        padding: 0.1rem 0.5rem;
+        border: 1px solid var(--ardoise);
+        border-radius: 999px;
+        font-size: 0.875rem;
+        color: var(--brume);
+      }
+      .etiquette.accent {
+        border-color: rgba(110, 216, 198, 0.4);
+        background: rgba(110, 216, 198, 0.12);
+        color: var(--mesure);
+      }
+      .id {
+        font-size: 0.875rem;
+        color: var(--brume);
+        font-variant-numeric: tabular-nums;
+      }
+      audio {
+        width: 100%;
+        min-height: 2.75rem;
+      }
+      .vide {
+        padding: 1.5rem;
+        border: 1px solid var(--ardoise);
+        border-radius: 0.5rem;
+        background: var(--graphite);
+      }
+      code {
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.25rem;
+        background: var(--ardoise);
+        font-size: 0.9375rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Écoute des voix</h1>
+      <p class="sous">
+        Le même extrait, lu par chaque voix française du service. Le texte est identique
+        partout : ce qui change est la voix, et rien d’autre.
+      </p>
+
+      <div class="extrait" id="extrait">
+        <p id="extrait-intro"></p>
+        <p id="extrait-paragraphe"></p>
+      </div>
+
+      <details>
+        <summary>Le texte réellement envoyé au moteur</summary>
+        <div>
+          <p class="sous">
+            L’extrait passe par un normaliseur avant la synthèse. Sans lui, « 200 000 » est
+            lu « deux, zéro zéro zéro », « XVIᵉ » est épelé, et les guillemets produisent
+            des silences. Voici ce que le moteur reçoit :
+          </p>
+          <p id="extrait-normalise"></p>
+        </div>
+      </details>
+
+      <div id="contenu"></div>
+    </main>
+
+    <script src="./ecoute.js"></script>
+  </body>
+</html>
