@@ -190,6 +190,16 @@ export function RouteInvite({ children }: { children: ReactNode }) {
   const { chargement, utilisateur } = useAuth();
 
   if (chargement) return null;
-  if (utilisateur) return <Navigate to={CHEMINS.tableauDeBord} replace />;
+
+  // Une session ANONYME reste un invité.
+  //
+  // Cette garde renvoyait au tableau de bord dès qu'une session existait, sans
+  // distinguer un compte d'une session anonyme. Conséquence : quelqu'un qui
+  // passait l'évaluation sans compte était expulsé de la page d'inscription.
+  // Il ne pouvait donc pas créer de compte depuis la session qui portait sa
+  // passation — et c'est précisément par là que la passation se rattache.
+  if (utilisateur && !utilisateur.estAnonyme) {
+    return <Navigate to={CHEMINS.tableauDeBord} replace />;
+  }
   return <>{children}</>;
 }

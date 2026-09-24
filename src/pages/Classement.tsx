@@ -9,6 +9,9 @@ import { EmptyState, ErrorState, SkeletonListe } from '../components/ui/feedback
 import { APTITUDE_LABEL } from '../lib/iq/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
+/** Nombre de lignes demandées. Au-delà, le total affiché serait faux. */
+const LIMITE = 100;
+
 /**
  * Classement public.
  *
@@ -22,11 +25,32 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
  * Un point d'honnêteté, affiché à l'écran et non enfoui dans une documentation : un
  * classement par indice ordonne des mesures dont les intervalles se recouvrent
  * largement. Deux voisins de tableau ne sont pas départagés par la mesure.
+ *
+ * ── Trouver sa propre ligne ──
+ *
+ * Le rapprochement se fait sur le pseudonyme, seule donnée commune entre le profil
+ * et la vue publique — laquelle n'expose délibérément aucun identifiant de compte.
+ * C'est fiable : un index unique sur `lower(pseudonyme)` interdit les doublons, à la
+ * casse près. La comparaison est donc faite à la casse près, elle aussi.
  */
 export function Classement() {
   const { utilisateur, profil } = useAuth();
-  const etat = useAsync<EntreeClassement[]>(() => backend.lireClassement(100), []);
+  const etat = useAsync<EntreeClassement[]>(() => backend.lireClassement(LIMITE), []);
   const [deplie, setDeplie] = useState<string | null>(null);
+
+  const monPseudo = profil?.pseudonyme?.trim().toLowerCase() ?? '';
+  const entrees = etat.statut === 'pret' ? etat.donnees : [];
+  const maLigne = monPseudo
+    ? (entrees.find((e) => e.pseudonyme.toLowerCase() === monPseudo) ?? null)
+    : null;
+
+  // Incohérence : le profil dit « visible », et aucune ligne ne porte le
+  // pseudonyme. Ce cas existait bel et bien, parce que la fonction serveur
+  // enregistrait le consentement même quand elle n'avait aucune passation à
+  // publier. Elle refuse désormais, mais les comptes passés par là gardent cet
+  // état — il faut donc le nommer plutôt que laisser chercher.
+  const visibleSansLigne =
+    etat.statut === 'pret' && Boolean(profil?.classementVisible) && maLigne === null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -36,11 +60,38 @@ export function Classement() {
         pseudonyme paraît.
       </p>
 
+      {/* ── Le rang du visiteur, en tête ──────────────────────────────────
+          Placé avant le tableau, et non à chercher dedans : quand on vient voir
+          le classement après avoir passé l'évaluation, c'est cette ligne-là
+          qu'on cherche. Elle s'affiche même s'il n'y a qu'une seule personne
+          classée, auquel cas cette personne est première. */}
+      {maLigne && (
+        <MaPosition entree={maLigne} total={entrees.length} tronque={entrees.length >= LIMITE} />
+      )}
+
       <p className="mesure-texte mt-5 border-l-2 border-ardoise pl-4 text-petit text-texte">
         L’ordre suit l’indice estimé. Les intervalles de confiance se recouvrent
         largement d’une ligne à l’autre : ce tableau range des mesures, il ne départage
         pas deux personnes voisines.
       </p>
+
+      {visibleSansLigne && (
+        <div className="mt-8 border-l-2 border-alerte pl-4">
+          <p className="mesure-texte text-petit text-texte">
+            Votre compte est réglé sur « visible », mais aucune ligne ne vous
+            correspond. C’est le signe qu’aucune passation exploitable n’y est
+            rattachée : une évaluation passée sans être connecté reste sur la session
+            qui l’a passée. Vos paramètres vous diront précisément ce qui manque.
+          </p>
+          <div className="mt-3">
+            <Link to={CHEMINS.parametres} className="inline-flex">
+              <Button variant="secondaire" taille="compact">
+                Ouvrir mes paramètres
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Invitation à figurer, adressée à ceux qui n'y sont pas encore. */}
       {utilisateur && profil && !profil.classementVisible && (
@@ -93,7 +144,7 @@ export function Classement() {
           <ol className="flex flex-col gap-2">
             {etat.donnees.map((entree) => {
               const ouvert = deplie === entree.pseudonyme;
-              const soi = profil?.pseudonyme === entree.pseudonyme;
+              const soi = maLigne?.pseudonyme === entree.pseudonyme;
 
               return (
                 <li
@@ -196,5 +247,64 @@ export function Classement() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Le rang du visiteur, mis en évidence.
+ *
+ * Deux choix de rédaction :
+ *
+ * - « 1ᵉʳ sur 1 » serait exact et ridicule. Quand on est seul, on le dit en
+ *   français : premier, et seul pour l'instant. Le rang n'est pas faux pour
+ *   autant — il n'est simplement pas encore disputé.
+ * - le total n'est affiché que s'il est complet. La page ne demande que
+ *   `LIMITE` lignes ; au-delà, « sur 100 » désignerait la taille de la requête
+ *   et non celle du classement, ce qui serait un chiffre inventé.
+ */
+function MaPosition({
+  entree,
+  total,
+  tronque,
+}: {
+  entree: EntreeClassement;
+  total: number;
+  tronque: boolean;
+}) {
+  const seul = total === 1;
+  const ordinal = entree.rang === 1 ? '1ᵉʳ' : `${entree.rang}ᵉ`;
+
+  return (
+    <section
+      aria-label="Votre position au classement"
+      className="mt-8 rounded-2 border border-mesure/60 bg-mesure/10 p-5 sm:p-6"
+    >
+      <p className="text-micro tracking-wide text-mesure uppercase">Votre position</p>
+
+      <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-3">
+        <p className="nombres text-indice leading-none text-craie">{ordinal}</p>
+
+        <div className="flex-1">
+          <p className="text-petit text-craie">
+            {entree.pseudonyme}
+            <span className="ml-2 text-micro text-brume">{LIBELLE_NIVEAU[entree.niveau]}</span>
+          </p>
+          <p className="mt-1 text-petit text-texte">
+            {seul
+              ? 'Vous êtes seul à figurer au classement pour l’instant : vous en êtes donc premier.'
+              : tronque
+                ? `Parmi les ${total} premiers du classement.`
+                : `Sur ${total} personne${total > 1 ? 's' : ''} classée${total > 1 ? 's' : ''}.`}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="nombres text-t2 text-craie">{entree.score}</p>
+          <p className="nombres text-micro text-brume">
+            {entree.borneBasse}–{entree.borneHaute}
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }

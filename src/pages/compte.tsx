@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { backend } from '../lib/backend';
 import { useAuth } from '../app/auth';
+import { useAsync } from '../app/useAsync';
 import { CHEMINS } from '../app/navigation';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
@@ -150,7 +151,7 @@ export function NonTrouve() {
 /**
  * Consentement au classement public, et choix du pseudonyme.
  *
- * Deux principes, tous deux appliqués côté serveur et pas seulement ici :
+ * Deux principes, tous deux appliqués cote serveur et pas seulement ici :
  *
  * 1. Rien n'est publié par défaut. La case est décochée à la création du compte, et
  *    l'activer est un geste explicite.
@@ -158,22 +159,46 @@ export function NonTrouve() {
  *    directe : les privilèges de colonne l'interdisent, et la fonction serveur
  *    vérifie que l'adresse e-mail est confirmée avant de publier quoi que ce soit.
  *
- * L'écran dit aussi ce qui sera publié, avant de le publier. Une case à cocher dont
- * on doit deviner l'effet n'est pas un consentement.
+ * -- Ce que cet écran a cessé de faire --
+ *
+ * Le bouton « Figurer au classement » était simplement `disabled` quand une des conditions
+ * manquait. Rien ne disait laquelle. On appuyait, il ne se passait rien, et la
+ * conclusion raisonnable était que la fonction est cassée.
+ *
+ * Désormais : les trois conditions sont affichées avec leur état, le bouton reste
+ * actif, et une pression produit toujours une réponse — le succès, ou la phrase du
+ * serveur qui dit ce qui manque. Un bouton inerte n'est pas un message d'erreur.
  */
 function ReglagesClassement() {
   const { utilisateur, profil, rafraichirProfil } = useAuth();
 
   const [pseudonyme, setPseudonyme] = useState(profil?.pseudonyme ?? '');
-  const [erreur, setErreur] = useState<string | null>(null);
+  const [erreurPseudo, setErreurPseudo] = useState<string | null>(null);
+  const [erreurAction, setErreurAction] = useState<string | null>(null);
   const [succes, setSucces] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
   const visible = profil?.classementVisible ?? false;
   const confirme = utilisateur?.emailConfirme ?? false;
 
+  // Éligibilité de la passation, lue depuis ses propres passations — le même
+  // filtre que celui de la fonction serveur, pour que l'ecran annonce ce que le
+  // serveur décidera et non l'inverse.
+  const passations = useAsync(() => backend.listerPassations(), []);
+  const publiable =
+    passations.statut === 'pret'
+      ? passations.donnees.some(
+          (item) =>
+            item.termineeLe !== null &&
+            item.verdict !== 'not_interpretable' &&
+            item.indice !== null &&
+            item.niveau !== null
+        )
+      : null;
+
   async function basculer(prochain: boolean) {
-    setErreur(null);
+    setErreurPseudo(null);
+    setErreurAction(null);
     setSucces(null);
     setEnvoi(true);
 
@@ -184,7 +209,7 @@ function ReglagesClassement() {
     setEnvoi(false);
 
     if (!resultat.ok) {
-      setErreur(resultat.message);
+      setErreurAction(resultat.message);
       return;
     }
     await rafraichirProfil();
@@ -197,7 +222,8 @@ function ReglagesClassement() {
 
   async function enregistrerPseudonyme(evenement: FormEvent) {
     evenement.preventDefault();
-    setErreur(null);
+    setErreurPseudo(null);
+    setErreurAction(null);
     setSucces(null);
     setEnvoi(true);
 
@@ -205,7 +231,7 @@ function ReglagesClassement() {
     setEnvoi(false);
 
     if (!resultat.ok) {
-      setErreur(resultat.message);
+      setErreurPseudo(resultat.message);
       return;
     }
     await rafraichirProfil();
@@ -222,10 +248,39 @@ function ReglagesClassement() {
         adresse e-mail, ni votre nom, ni aucune autre donnée.
       </p>
 
+      {/* Les trois conditions, et laquelle manque. */}
+      <ul className="flex flex-col gap-2 text-petit">
+        <Condition remplie={confirme} lien={null}>
+          Adresse e-mail confirmée
+        </Condition>
+        <Condition remplie={Boolean(pseudonyme.trim())} lien={null}>
+          Pseudonyme choisi
+        </Condition>
+        <Condition
+          remplie={publiable}
+          lien={
+            publiable === false
+              ? { vers: CHEMINS.evaluation, texte: 'Passer l’évaluation' }
+              : null
+          }
+        >
+          Une passation exploitable rattachée a ce compte
+        </Condition>
+      </ul>
+
       {!confirme && (
         <p className="mesure-texte border-l-2 border-alerte pl-4 text-petit text-texte">
-          Confirmez d’abord votre adresse e-mail : seuls les comptes confirmés peuvent
-          figurer au classement.
+          Confirmez d’abord votre adresse e-mail : seuls les comptes confirmés
+          peuvent figurer au classement.
+        </p>
+      )}
+
+      {publiable === false && (
+        <p className="mesure-texte border-l-2 border-alerte pl-4 text-petit text-texte">
+          Aucune passation n’est rattachée à ce compte. Si vous avez passé
+          l’évaluation sans être connecté, le resultat est resté sur cette session-là :
+          repassez-la une fois connecté, elle sera cette fois enregistrée sur votre
+          compte.
         </p>
       )}
 
@@ -235,7 +290,7 @@ function ReglagesClassement() {
           value={pseudonyme}
           onChange={(e) => setPseudonyme(e.target.value)}
           aide="3 à 24 lettres, chiffres, tirets ou tirets bas. Évitez votre vrai nom."
-          erreur={erreur}
+          erreur={erreurPseudo}
         />
         <div className="flex flex-wrap gap-3">
           <Button
@@ -246,15 +301,26 @@ function ReglagesClassement() {
             {envoi ? 'Enregistrement…' : 'Enregistrer le pseudonyme'}
           </Button>
 
+          {/* Actif même quand une condition manque : le refus du serveur est une
+              phrase, et une phrase renseigne. */}
           <Button
             variant={visible ? 'secondaire' : 'principal'}
-            disabled={envoi || !confirme || (!visible && !pseudonyme.trim())}
+            disabled={envoi}
             onClick={() => void basculer(!visible)}
           >
             {visible ? 'Me retirer du classement' : 'Figurer au classement'}
           </Button>
         </div>
       </form>
+
+      {erreurAction && (
+        <p
+          role="alert"
+          className="mesure-texte border-l-2 border-alerte pl-4 text-petit text-texte"
+        >
+          {erreurAction}
+        </p>
+      )}
 
       <p className="text-petit text-texte">
         État actuel :{' '}
@@ -266,9 +332,53 @@ function ReglagesClassement() {
 
       {succes && (
         <p role="status" className="text-petit text-mesure">
-          {succes}
+          {succes}{' '}
+          <Link to={CHEMINS.classement} className="text-mesure underline underline-offset-2">
+            Voir le classement
+          </Link>
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * Une condition et son état.
+ *
+ * `remplie` vaut `null` tant que la réponse n'est pas connue : on affiche alors un
+ * état d’attente plutôt qu'une croix, parce qu'annoncer un manque qu'on n’a pas
+ * encore vérifié est un mensonge par empressement.
+ */
+function Condition({
+  remplie,
+  lien,
+  children,
+}: {
+  remplie: boolean | null;
+  lien: { vers: string; texte: string } | null;
+  children: ReactNode;
+}) {
+  const etat = remplie === null ? 'vérification…' : remplie ? 'satisfaite' : 'manquante';
+
+  return (
+    <li className="flex items-start gap-3">
+      <span
+        aria-hidden="true"
+        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+          remplie === null ? 'bg-ardoise' : remplie ? 'bg-mesure' : 'bg-alerte'
+        }`}
+      />
+      <span className={remplie ? 'text-texte' : 'text-craie'}>
+        {children} <span className="sr-only">: {etat}</span>
+        {lien && (
+          <>
+            {' -- '}
+            <Link to={lien.vers} className="text-mesure underline underline-offset-2">
+              {lien.texte}
+            </Link>
+          </>
+        )}
+      </span>
+    </li>
   );
 }

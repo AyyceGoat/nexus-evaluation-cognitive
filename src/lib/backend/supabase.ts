@@ -191,13 +191,19 @@ function versResultatServeur(ligne: LigneResultat): ResultatServeur {
 
 export function creerBackendSupabase(client: SupabaseClient): BackendPort {
   const versUtilisateur = (
-    u: { id: string; email?: string; email_confirmed_at?: string | null } | null
+    u: {
+      id: string;
+      email?: string;
+      email_confirmed_at?: string | null;
+      is_anonymous?: boolean;
+    } | null
   ): Utilisateur | null =>
     u
       ? {
           id: u.id,
           email: u.email ?? '',
           emailConfirme: Boolean(u.email_confirmed_at),
+          estAnonyme: Boolean(u.is_anonymous),
         }
       : null;
 
@@ -249,6 +255,29 @@ export function creerBackendSupabase(client: SupabaseClient): BackendPort {
     },
 
     async inscrire(email, motDePasse, nomAffiche) {
+      const { data } = await client.auth.getUser();
+
+      // ── Session anonyme en cours : on la RATTACHE, on n'en crée pas une autre ──
+      //
+      // C'est le correctif d'un défaut constaté en base : quelqu'un passait
+      // l'évaluation sans compte, créait un compte ensuite, et son résultat
+      // restait sur la session anonyme. Il avait bel et bien passé l'évaluation,
+      // et son compte n'avait aucune passation.
+      //
+      // `updateUser` transforme le compte anonyme en compte permanent : le même
+      // identifiant, donc les mêmes passations. L'adresse reste à confirmer.
+      if (data.user?.is_anonymous) {
+        const { error } = await client.auth.updateUser(
+          {
+            email: email.trim(),
+            password: motDePasse,
+            data: { display_name: nomAffiche.trim() },
+          },
+          { emailRedirectTo: `${window.location.origin}/connexion` }
+        );
+        return error ? echec(message(error)) : succes(undefined);
+      }
+
       const { error } = await client.auth.signUp({
         email: email.trim(),
         password: motDePasse,

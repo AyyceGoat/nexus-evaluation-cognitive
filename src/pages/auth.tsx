@@ -4,6 +4,7 @@ import { backend } from '../lib/backend';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
 import { CHEMINS } from '../app/navigation';
+import { useAuth } from '../app/auth';
 
 /** Colonne étroite commune aux trois écrans d'authentification. */
 function Cadre({ titre, sous, children }: { titre: string; sous: string; children: ReactNode }) {
@@ -25,6 +26,12 @@ export function Inscription() {
   const emplacement = useLocation();
   const retour = (emplacement.state as EtatRetour | null)?.retourVers;
 
+  // Session anonyme en cours : l'inscription va la rattacher, pas en créer une
+  // autre. On le dit avant, parce que c'est une garantie qui compte pour qui
+  // vient de passer l'évaluation.
+  const { utilisateur } = useAuth();
+  const rattachement = utilisateur?.estAnonyme ?? false;
+
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -45,9 +52,14 @@ export function Inscription() {
       return;
     }
 
-    // En mode Supabase, la session n'existe qu'après confirmation de l'adresse.
-    const utilisateur = await backend.utilisateurCourant();
-    if (utilisateur) {
+    // Le critère est l'adresse CONFIRMÉE, pas la simple existence d'une session.
+    //
+    // Dans le cas du rattachement, la session anonyme reste ouverte pendant que
+    // l'adresse attend sa confirmation : `utilisateurCourant()` rend donc un
+    // utilisateur, et tester sa seule présence aurait conduit à l'accueil
+    // connecté en sautant l'écran « vérifiez votre boîte mail ».
+    const courant = await backend.utilisateurCourant();
+    if (courant?.emailConfirme) {
       navigate(retour ?? CHEMINS.bienvenue, { replace: true });
     } else {
       setConfirmationAttendue(true);
@@ -65,6 +77,12 @@ export function Inscription() {
             Sans confirmation, la connexion est refusée : c’est ce qui garantit que
             l’adresse vous appartient. Regardez aussi vos courriers indésirables.
           </p>
+          {rattachement && (
+            <p className="mesure-texte border-l-2 border-mesure pl-4 text-petit text-texte">
+              Votre passation est déjà rattachée à ce compte : elle sera là à votre
+              première connexion.
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
             <Link to={CHEMINS.connexion} className="inline-flex">
               <Button variant="principal">Aller à la connexion</Button>
@@ -79,8 +97,20 @@ export function Inscription() {
   return (
     <Cadre
       titre="Créer mon compte"
-      sous="Un compte conserve vos passations et permet de suivre votre progression d’une fois sur l’autre."
+      sous={
+        rattachement
+          ? 'Votre passation en cours suivra ce compte : c’est la même session qui devient permanente.'
+          : 'Un compte conserve vos passations et permet de suivre votre progression d’une fois sur l’autre.'
+      }
     >
+      {rattachement && (
+        <p className="mesure-texte mb-5 border-l-2 border-mesure pl-4 text-petit text-texte">
+          Vous avez passé l’évaluation sans compte. Créez-le ici, depuis cet onglet, et
+          votre résultat vous restera acquis — historique compris, et classement si vous
+          le souhaitez.
+        </p>
+      )}
+
       <form onSubmit={soumettre} noValidate className="flex flex-col gap-5">
         <Field
           label="Nom d’affichage"
@@ -109,7 +139,11 @@ export function Inscription() {
         />
 
         <Button type="submit" variant="principal" disabled={envoi}>
-          {envoi ? 'Création du compte…' : 'Créer mon compte'}
+          {envoi
+            ? 'Création du compte…'
+            : rattachement
+              ? 'Créer mon compte et garder ma passation'
+              : 'Créer mon compte'}
         </Button>
       </form>
 

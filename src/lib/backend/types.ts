@@ -12,6 +12,14 @@ export interface Utilisateur {
    * qu'une vérification écrite deux fois vaut mieux qu'une supposition.
    */
   emailConfirme: boolean;
+  /**
+   * Session anonyme, ouverte pour passer l'évaluation sans compte.
+   *
+   * Sert à rattacher la passation au compte lors de l'inscription : sans cela,
+   * quelqu'un qui passe l'évaluation puis crée un compte perd son résultat — il
+   * reste sur le compte anonyme. C'est exactement ce qui s'est produit.
+   */
+  estAnonyme: boolean;
 }
 
 export interface Profil {
