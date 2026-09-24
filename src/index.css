@@ -213,6 +213,48 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   GRILLES LONGUES — ne pas faire la mise en page de ce qui n'est pas vu.
+
+   Mesure du passage d'un onglet a l'autre, telephone a 390 px, 4G bridee,
+   module deja en cache :
+
+     Pays   : 712 ms mediane, jusqu'a 1141 ms
+     Savoir : 281 ms au format bureau
+
+   Ces ecrans montent 195 et 50 cartes d'un coup. Le temps ne part pas dans le
+   reseau — le module est en cache — mais dans la mise en page et la peinture de
+   centaines de noeuds dont trois tiennent a l'ecran.
+
+   `content-visibility: auto` laisse le navigateur sauter ce travail pour les
+   cartes hors du viewport, et le faire quand elles s'en approchent.
+   `contain-intrinsic-size` lui donne une hauteur presumee en attendant, sans
+   quoi la barre de defilement sauterait ; le mot-cle `auto` lui fait retenir la
+   hauteur reellement mesuree au premier affichage, ce qui rend l'estimation
+   exacte des le second passage.
+
+   Le contenu saute reste trouvable par la recherche du navigateur et present
+   dans l'arbre d'accessibilite : ce n'est pas du masquage, c'est de la mise en
+   page differee. Les navigateurs qui ignorent la propriete affichent tout
+   normalement, donc il n'y a rien a replier.
+
+   ── Pourquoi seule la grille du Savoir l'utilise ──
+
+   Essayee aussi sur les 195 cartes de la grille des pays, et retiree apres
+   mesure : le remontage s'ameliorait (531 -> 353 ms) mais le PREMIER affichage
+   se degradait franchement (461 -> 916 ms, reproductible sur trois passes).
+   Mettre 195 elements sous observation de visibilite a un cout d'installation,
+   paye au premier rendu. La grille des pays emploie donc un rendu progressif,
+   qui supprime le travail au lieu de le differer. A cinquante cartes,
+   l'arbitrage s'inverse : 315 -> 146 ms sans penalite au premier affichage.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Carte de grille : icone, titre, resume, pied. */
+.differe-carte {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 15rem;
+}
+
 /* Longueur de ligne lisible : 66 caractères visés. */
 .mesure-texte {
   max-width: 34rem;
