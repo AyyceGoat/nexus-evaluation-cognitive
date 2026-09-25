@@ -44,10 +44,17 @@
     #                               réel : sans cette origine, 195 images sont
     #                               bloquées
     #   connect-src *.supabase.co  authentification, base et fonction serveur
+    #   media-src  *.supabase.co   l'audio des articles lus, stocké là. Sans
+    #                              cette directive, `default-src 'self'`
+    #                              s'applique et le navigateur refuse le
+    #                              fichier : constaté sur le déploiement, le
+    #                              lecteur chargeait ses repères puis restait
+    #                              muet. Une politique se vérifie en écoutant,
+    #                              pas en la relisant
     #   worker-src blob:           three.js peut créer un worker pour le décodage
     #   frame-ancestors 'none'     même effet que X-Frame-Options, pour les
     #                              navigateurs qui ignorent le second
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://flagcdn.com; font-src 'self'; connect-src 'self' https://*.supabase.co; worker-src 'self' blob:; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://flagcdn.com; font-src 'self'; connect-src 'self' https://*.supabase.co; media-src 'self' https://*.supabase.co; worker-src 'self' blob:; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
 # Mise en cache longue durée pour les assets avec hash
 [[headers]]

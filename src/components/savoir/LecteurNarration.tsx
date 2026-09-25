@@ -66,6 +66,16 @@ export function LecteurNarration({ sujetId, onSegment }: Props) {
   const [essai, setEssai] = useState<string | null>(null);
   const [reprise, setReprise] = useState(() => lirePosition(sujetId));
 
+  /**
+   * Segment courant, gardé aussi ici et pas seulement remonté au parent.
+   *
+   * Pour une seule raison, trouvée en écoutant : la phrase d'introduction ne
+   * figure pas dans le texte de l'article. Pendant les quinze premières
+   * secondes, le parent n'avait donc rien à surligner et l'écran paraissait
+   * inerte alors que la voix parlait. Le lecteur affiche cette phrase lui-même.
+   */
+  const [segmentCourant, setSegmentCourant] = useState<SegmentAudio | null>(null);
+
   const audio = useRef<HTMLAudioElement | null>(null);
   const essaiAudio = useRef<HTMLAudioElement | null>(null);
   const dernierSegment = useRef<number>(-2);
@@ -78,6 +88,7 @@ export function LecteurNarration({ sujetId, onSegment }: Props) {
     setEnLecture(false);
     setPosition(0);
     dernierSegment.current = -2;
+    setSegmentCourant(null);
     onSegment(null);
   }, [sujetId, voix, onSegment]);
 
@@ -97,7 +108,9 @@ export function LecteurNarration({ sujetId, onSegment }: Props) {
       const rang = element.ended ? -1 : segmentA(narration.segments, element.currentTime);
       if (rang !== dernierSegment.current) {
         dernierSegment.current = rang;
-        onSegment(rang >= 0 ? narration.segments[rang] : null);
+        const segment = rang >= 0 ? narration.segments[rang] : null;
+        setSegmentCourant(segment);
+        onSegment(segment);
       }
 
       if (!element.paused && !element.ended) ecrirePosition(sujetId, element.currentTime);
@@ -139,6 +152,7 @@ export function LecteurNarration({ sujetId, onSegment }: Props) {
       setEnLecture(false);
       oublierPosition(sujetId);
       setReprise(0);
+      setSegmentCourant(null);
       onSegment(null);
     });
     audio.current = element;
@@ -181,6 +195,7 @@ export function LecteurNarration({ sujetId, onSegment }: Props) {
     setEnLecture(false);
     setPosition(0);
     dernierSegment.current = -2;
+    setSegmentCourant(null);
     onSegment(null);
     oublierPosition(sujetId);
     setReprise(0);
@@ -288,6 +303,12 @@ export function LecteurNarration({ sujetId, onSegment }: Props) {
       {etat === 'indisponible' && (
         <p role="status" className="mesure-texte mt-4 border-l-2 border-alerte pl-4 text-petit text-texte">
           La version lue de cet article n’est pas encore disponible dans cette voix.
+        </p>
+      )}
+
+      {segmentCourant?.type === 'intro' && (
+        <p className="mesure-texte mt-4 border-l-2 border-mesure pl-4 text-petit text-craie italic">
+          {segmentCourant.affiche}
         </p>
       )}
 

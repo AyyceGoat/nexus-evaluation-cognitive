@@ -102,19 +102,81 @@ if (session.error || !session.data.session) {
   await anonyme.auth.signOut();
 }
 
-/* ── 4. Un fichier déposé est réellement servi ────────────────────────── */
+/* ── 4. Un fichier déposé est réellement servi, et avec le bon type ──────
+   Le contenu est rangé en deux dossiers : `audio/` et `sync/`. Une première
+   version de ce contrôle listait la racine et prenait la première entrée, qui
+   est un DOSSIER : le service répondait 400, et l'échec venait de la sonde.
+   Le type MIME est vérifié en même temps, car il décide : un MP3 servi en
+   `application/octet-stream` n'est pas lu de façon fiable par un élément
+   audio. */
 
-if (!liste.error && liste.data.length > 0) {
-  const premier = liste.data.find((f) => f.name.endsWith('.mp3')) ?? liste.data[0];
-  const { data } = visiteur.storage.from(BUCKET).getPublicUrl(premier.name);
+const ATTENDUS = [
+  { dossier: 'audio', extension: '.mp3', type: 'audio/mpeg' },
+  { dossier: 'sync', extension: '.json', type: 'application/json' },
+];
+
+for (const attendu of ATTENDUS) {
+  const contenu = await visiteur.storage.from(BUCKET).list(attendu.dossier, { limit: 5 });
+  const fichier = contenu.error
+    ? null
+    : contenu.data.find((f) => f.name.endsWith(attendu.extension));
+
+  if (!fichier) {
+    console.log(
+      `INFO   ${attendu.dossier}/ : aucun fichier, controle de service reporte` +
+        (contenu.error ? ` (${contenu.error.message.slice(0, 50)})` : '')
+    );
+    continue;
+  }
+
+  const { data } = visiteur.storage
+    .from(BUCKET)
+    .getPublicUrl(`${attendu.dossier}/${fichier.name}`);
   const reponse = await fetch(data.publicUrl, { method: 'HEAD' });
+  const type = reponse.headers.get('content-type') ?? '';
+
   verifier(
-    'un fichier du bucket est servi publiquement',
+    `${attendu.dossier}/ est servi publiquement`,
     reponse.ok,
-    `${reponse.status} ${reponse.headers.get('content-type') ?? ''} ${reponse.headers.get('content-length') ?? ''}`
+    `${reponse.status}, ${reponse.headers.get('content-length') ?? '?'} octets`
   );
-} else {
-  console.log('INFO   aucun fichier dans le bucket : controle de service reporte');
+  verifier(
+    `${attendu.dossier}/ est servi en ${attendu.type}`,
+    type.startsWith(attendu.type),
+    type || 'aucun type'
+  );
+}
+
+/* ── 5. La revalidation fonctionne, et les plages aussi ───────────────── */
+
+{
+  const contenu = await visiteur.storage.from(BUCKET).list('audio', { limit: 1 });
+  const fichier = contenu.error ? null : contenu.data.find((f) => f.name.endsWith('.mp3'));
+  if (fichier) {
+    const { data } = visiteur.storage.from(BUCKET).getPublicUrl(`audio/${fichier.name}`);
+
+    // Les objets sont servis en `no-cache`, le drapeau de la CLI de depot
+    // n'atteignant pas le service. Ce qui compte n'est pas l'en-tete mais son
+    // effet : une seconde requete doit rendre 304 sans corps, sinon chaque
+    // ecoute retelechargerait deux megaoctets.
+    const premier = await fetch(data.publicUrl);
+    const etiquette = premier.headers.get('etag');
+    const second = await fetch(data.publicUrl, { headers: { 'If-None-Match': etiquette ?? '' } });
+    const corps = await second.arrayBuffer();
+    verifier(
+      'une seconde requete est revalidee sans renvoyer le corps',
+      second.status === 304 && corps.byteLength === 0,
+      `${second.status}, ${corps.byteLength} octet(s)`
+    );
+
+    // Le deplacement dans la lecture en depend.
+    const plage = await fetch(data.publicUrl, { headers: { Range: 'bytes=0-1023' } });
+    verifier(
+      'les requetes de plage sont acceptees',
+      plage.status === 206,
+      `${plage.status} ${plage.headers.get('content-range') ?? ''}`
+    );
+  }
 }
 
 console.log('');
