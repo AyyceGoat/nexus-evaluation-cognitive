@@ -27,7 +27,7 @@
   var choix = document.getElementById('choix');
   var contenu = document.getElementById('contenu');
 
-  var etat = { segments: [], noeuds: [], actif: -1, audio: null };
+  var etat = { segments: [], noeuds: [], actif: -1, audio: null, minuteur: 0 };
 
   function minutes(secondes) {
     var m = Math.floor(secondes / 60);
@@ -100,7 +100,8 @@
 
   function rendre(entree, donnees) {
     contenu.textContent = '';
-    etat = { segments: donnees.segments, noeuds: [], actif: -1, audio: null };
+    if (etat.minuteur) window.clearInterval(etat.minuteur);
+    etat = { segments: donnees.segments, noeuds: [], actif: -1, audio: null, minuteur: 0 };
 
     var lecteur = document.createElement('div');
     lecteur.className = 'lecteur';
@@ -144,15 +145,28 @@
 
     etat.audio = audio;
 
-    audio.addEventListener('timeupdate', function () {
-      surligner(segmentA(audio.currentTime));
-    });
-    audio.addEventListener('seeked', function () {
-      surligner(segmentA(audio.currentTime));
-    });
-    audio.addEventListener('ended', function () {
-      surligner(-1);
-    });
+    // Le surlignage suit la POSITION, pas les évènements.
+    //
+    // Une première version écoutait `timeupdate` et `seeked`. Elle marchait à
+    // la lecture et échouait par intermittence sur un déplacement : quand le
+    // fichier n'a jamais été joué, seules ses métadonnées sont chargées, et le
+    // navigateur peut enregistrer la nouvelle position sans émettre `seeked`.
+    // Deux sondes identiques à quelques secondes d'intervalle ont donné deux
+    // résultats différents, ce qui est le signe qu'il ne faut pas se fier à
+    // l'évènement.
+    //
+    // Une relève périodique ne fait aucune hypothèse : elle lit la position.
+    // Le coût est négligeable — sept lectures par seconde sur une vingtaine de
+    // segments — et elle couvre du même geste la lecture, le déplacement à la
+    // souris et une position posée par programme.
+    if (etat.minuteur) window.clearInterval(etat.minuteur);
+    etat.minuteur = window.setInterval(function () {
+      if (!document.body.contains(audio)) {
+        window.clearInterval(etat.minuteur);
+        return;
+      }
+      surligner(audio.ended ? -1 : segmentA(audio.currentTime));
+    }, 150);
   }
 
   function choisir(entrees) {
