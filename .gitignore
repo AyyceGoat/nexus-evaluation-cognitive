@@ -32,3 +32,10 @@ verification/
 
 # Dossier local de la CLI Netlify : contient l'identifiant du site lie.
 .netlify
+
+# Échantillons de voix : artefacts d'une décision, pas du produit.
+# Ils partent dans le déploiement de prévisualisation (Vite copie public/),
+# mais 2,8 Mo de MP3 jetables n'ont rien à faire dans l'historique Git.
+public/ecoute/*.mp3
+public/ecoute/*.reperes.json
+public/ecoute/manifeste.json

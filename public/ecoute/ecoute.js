@@ -5,6 +5,11 @@
  * `script-src 'self'`, et un fichier séparé évite de dépendre d'une tolérance
  * sur les scripts en ligne.
  *
+ * Le regroupement se fait par pays puis par genre. L'ordre n'est pas
+ * décoratif : les voix de France arrivent en premier parce que ce sont les
+ * seules candidates réelles pour ce produit, les autres servant de point de
+ * comparaison.
+ *
  * La page fonctionne sans manifeste : elle affiche alors ce qu'il faut faire
  * pour en produire un, plutôt qu'un écran vide.
  */
@@ -13,8 +18,18 @@
 
   var contenu = document.getElementById('contenu');
 
-  function texte(element, valeur) {
-    var cible = document.getElementById(element);
+  /** Pays d'abord la France : les autres ne sont là que pour comparer. */
+  var ORDRE_LOCALES = ['fr-FR', 'fr-BE', 'fr-CH', 'fr-CA'];
+
+  var NOM_LOCALES = {
+    'fr-FR': 'France',
+    'fr-BE': 'Belgique',
+    'fr-CH': 'Suisse',
+    'fr-CA': 'Canada',
+  };
+
+  function texte(id, valeur) {
+    var cible = document.getElementById(id);
     if (cible) cible.textContent = valeur;
   }
 
@@ -25,39 +40,85 @@
     return span;
   }
 
+  function paragraphe(valeur, classe) {
+    var p = document.createElement('p');
+    if (classe) p.className = classe;
+    p.textContent = valeur;
+    return p;
+  }
+
   function messageVide(detail) {
     var bloc = document.createElement('div');
     bloc.className = 'vide';
 
-    var titre = document.createElement('p');
+    var titre = paragraphe('Aucun échantillon pour l’instant.');
     titre.style.color = 'var(--craie)';
     titre.style.marginTop = '0';
-    titre.textContent = 'Aucun échantillon pour l’instant.';
     bloc.appendChild(titre);
 
-    var explication = document.createElement('p');
-    explication.className = 'sous';
-    explication.textContent =
-      'La génération demande une clé d’API, qui n’est pas dans le dépôt. Une fois la clé ' +
-      'posée dans .env, la commande ci-dessous produit un échantillon par voix française ' +
-      'du service, puis remplit cette page.';
-    bloc.appendChild(explication);
+    bloc.appendChild(
+      paragraphe(
+        'La commande ci-dessous produit un échantillon par voix française du catalogue. ' +
+          'Elle ne demande ni compte ni clé : edge-tts s’adresse au moteur de lecture à ' +
+          'voix haute du navigateur Edge.',
+        'sous'
+      )
+    );
 
     var commande = document.createElement('p');
     var code = document.createElement('code');
-    code.textContent = 'node scripts/genere-echantillons.mjs --service azure';
+    code.textContent = 'npm run echantillons';
     commande.appendChild(code);
     bloc.appendChild(commande);
 
     if (detail) {
-      var note = document.createElement('p');
-      note.className = 'sous';
+      var note = paragraphe(detail, 'sous');
       note.style.fontSize = '0.875rem';
-      note.textContent = detail;
       bloc.appendChild(note);
     }
 
     contenu.appendChild(bloc);
+  }
+
+  function carte(v) {
+    var li = document.createElement('li');
+
+    var bandeau = document.createElement('div');
+    bandeau.className = 'entete';
+
+    var nom = document.createElement('span');
+    nom.className = 'nom';
+    nom.textContent = v.nom;
+    bandeau.appendChild(nom);
+
+    bandeau.appendChild(etiquette(v.genre));
+    if (v.multilingue) bandeau.appendChild(etiquette('multilingue', true));
+    if (v.reperesFichier) {
+      bandeau.appendChild(etiquette(v.mots + ' repères de mots', true));
+    }
+
+    var identifiant = document.createElement('span');
+    identifiant.className = 'id';
+    identifiant.textContent = v.id + ' · ' + Math.round((v.octets || 0) / 1024) + ' ko';
+    bandeau.appendChild(identifiant);
+
+    li.appendChild(bandeau);
+
+    var audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload = 'none';
+    audio.src = './' + v.fichier;
+    // Une seule lecture à la fois : comparer deux voix qui parlent ensemble ne
+    // renseigne sur aucune des deux.
+    audio.addEventListener('play', function () {
+      var tous = document.querySelectorAll('audio');
+      for (var i = 0; i < tous.length; i++) {
+        if (tous[i] !== audio) tous[i].pause();
+      }
+    });
+    li.appendChild(audio);
+
+    return li;
   }
 
   function rendre(manifeste) {
@@ -65,76 +126,67 @@
     texte('extrait-paragraphe', manifeste.extrait.paragraphe);
     texte('extrait-normalise', manifeste.extrait.normalise);
 
-    var entete = document.createElement('p');
-    entete.className = 'sous';
-    entete.textContent =
-      manifeste.voix.length +
-      ' voix, service ' +
-      manifeste.service +
-      ', générées le ' +
-      new Date(manifeste.genere).toLocaleString('fr-FR');
-    contenu.appendChild(entete);
+    var deFrance = manifeste.voix.filter(function (v) {
+      return v.locale === 'fr-FR';
+    }).length;
 
-    var groupes = [
-      ['Voix féminines', 'féminine'],
-      ['Voix masculines', 'masculine'],
-    ];
+    contenu.appendChild(
+      paragraphe(
+        manifeste.voix.length +
+          ' voix, dont ' +
+          deFrance +
+          ' de France. Service : ' +
+          manifeste.service +
+          '. Débit ' +
+          manifeste.debit +
+          '. Généré le ' +
+          new Date(manifeste.genere).toLocaleString('fr-FR') +
+          '.',
+        'sous'
+      )
+    );
 
-    groupes.forEach(function (groupe) {
-      var liste = manifeste.voix.filter(function (v) {
-        return v.genre === groupe[1];
+    var locales = ORDRE_LOCALES.filter(function (l) {
+      return manifeste.voix.some(function (v) {
+        return v.locale === l;
       });
-      if (liste.length === 0) return;
+    });
 
+    locales.forEach(function (locale) {
       var titre = document.createElement('h2');
-      titre.textContent = groupe[0] + ' (' + liste.length + ')';
+      titre.textContent = NOM_LOCALES[locale] || locale;
       contenu.appendChild(titre);
 
-      var ul = document.createElement('ul');
-      ul.className = 'voix';
+      if (locale !== 'fr-FR') {
+        contenu.appendChild(
+          paragraphe('Pour comparaison : l’accent n’est pas celui du public visé.', 'sous')
+        );
+      }
 
-      liste.forEach(function (v) {
-        var li = document.createElement('li');
-
-        var bandeau = document.createElement('div');
-        bandeau.className = 'entete';
-
-        var nom = document.createElement('span');
-        nom.className = 'nom';
-        nom.textContent = v.nom || v.id;
-        bandeau.appendChild(nom);
-
-        if (v.multilingue) bandeau.appendChild(etiquette('multilingue', true));
-        if (v.motsParMinute) bandeau.appendChild(etiquette(v.motsParMinute + ' mots/min'));
-        (v.styles || []).slice(0, 3).forEach(function (style) {
-          if (style) bandeau.appendChild(etiquette(style));
+      [
+        ['féminine', 'Féminines'],
+        ['masculine', 'Masculines'],
+      ].forEach(function (groupe) {
+        var liste = manifeste.voix.filter(function (v) {
+          return v.locale === locale && v.genre === groupe[0];
         });
+        if (liste.length === 0) return;
 
-        var identifiant = document.createElement('span');
-        identifiant.className = 'id';
-        identifiant.textContent = v.id + ' · ' + Math.round((v.octets || 0) / 1024) + ' ko';
-        bandeau.appendChild(identifiant);
+        var sousTitre = document.createElement('h3');
+        sousTitre.style.margin = '1.5rem 0 0.75rem';
+        sousTitre.style.fontSize = '1rem';
+        sousTitre.style.color = 'var(--brume)';
+        sousTitre.style.fontWeight = '600';
+        sousTitre.textContent = groupe[1] + ' (' + liste.length + ')';
+        contenu.appendChild(sousTitre);
 
-        li.appendChild(bandeau);
-
-        var audio = document.createElement('audio');
-        audio.controls = true;
-        audio.preload = 'none';
-        audio.src = './' + v.fichier;
-        // Une seule lecture à la fois : comparer deux voix qui parlent ensemble
-        // ne renseigne sur aucune des deux.
-        audio.addEventListener('play', function () {
-          var tous = document.querySelectorAll('audio');
-          for (var i = 0; i < tous.length; i++) {
-            if (tous[i] !== audio) tous[i].pause();
-          }
+        var ul = document.createElement('ul');
+        ul.className = 'voix';
+        liste.forEach(function (v) {
+          ul.appendChild(carte(v));
         });
-        li.appendChild(audio);
-
-        ul.appendChild(li);
+        contenu.appendChild(ul);
       });
-
-      contenu.appendChild(ul);
     });
   }
 

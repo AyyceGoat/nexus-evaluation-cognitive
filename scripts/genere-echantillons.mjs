@@ -1,48 +1,61 @@
 /**
- * Génère les échantillons de voix à comparer, et la page d'écoute.
+ * Génère les échantillons de voix à comparer, et remplit la page d'écoute.
+ *
+ * ── Le service retenu ──
+ *
+ * edge-tts, qui s'adresse au moteur de lecture à voix haute du navigateur Edge.
+ * Mêmes voix neuronales que le service payant de Microsoft — Éloïse et Denise
+ * comprises — sans compte, sans clé, sans facturation.
+ *
+ * La seule réserve, et elle est réelle : cet accès n'est pas une API publiée
+ * sous contrat, et Microsoft peut le modifier sans préavis. La conséquence est
+ * limitée par la forme du produit : les fichiers sont produits une fois et
+ * servis ensuite depuis notre propre stockage. Une rupture côté Microsoft
+ * empêcherait une nouvelle génération, pas l'écoute de ce qui existe.
  *
  * ── Ce que ce script fait ──
  *
  * Il prend UN extrait — une phrase d'introduction suivie d'un paragraphe réel —
- * et le fait lire par toutes les voix françaises que le service propose. Le
- * texte est identique d'une voix à l'autre : c'est la seule façon de comparer
- * autre chose que le contenu.
+ * et le fait lire par chaque voix française du catalogue. Le texte est
+ * identique d'une voix à l'autre : c'est la seule façon de comparer autre chose
+ * que le contenu.
  *
  * L'extrait n'est pas choisi au hasard. Il contient un ordinal en exposant
  * (« XVIᵉ »), deux dates, des guillemets français et deux tirets cadratins,
  * c'est-à-dire précisément ce que le normaliseur doit corriger. On entend donc
- * en même temps la voix et le traitement du texte.
+ * la voix et le traitement du texte en même temps.
+ *
+ * ── Pourquoi le texte simple et non du SSML ──
+ *
+ * edge-tts n'accepte pas de SSML arbitraire : il construit le sien à partir du
+ * texte, du débit, du volume et de la hauteur. Les sigles passent donc par la
+ * sortie `versTexte` du normaliseur, où ils sont épelés en clair — « e té
+ * effe » — au lieu d'être confiés à `say-as`. C'est la contrepartie de
+ * l'absence de compte, et elle est mesurable : le résultat s'entend dans les
+ * échantillons.
  *
  * ── Ce qu'il ne fait pas ──
  *
  * Il ne génère pas les cinquante articles. Cette étape vient après le choix de
- * la voix, avec `scripts/genere-audio.mjs`.
- *
- * ── Comment la liste des voix est obtenue ──
- *
- * Par l'API du service, jamais par une liste écrite à la main. Les catalogues
- * changent, et une liste recopiée finirait par proposer une voix retirée ou
- * taire une voix nouvelle.
- *
- * ── Clés ──
- *
- * Aucune clé n'est écrite dans le projet. Le script lit l'environnement, via
- * `.env`, qui est ignoré par Git :
- *
- *   AZURE_SPEECH_KEY et AZURE_SPEECH_REGION    (service recommandé)
- *   ELEVENLABS_API_KEY                         (variante)
+ * la voix.
  *
  * Usage :
- *   node scripts/genere-echantillons.mjs --service azure
- *   node scripts/genere-echantillons.mjs --service azure --liste-seulement
- *   node scripts/genere-echantillons.mjs --service elevenlabs
+ *   node scripts/genere-echantillons.mjs
+ *   node scripts/genere-echantillons.mjs --liste-seulement
+ *   node scripts/genere-echantillons.mjs --locale fr-FR
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { lireEnv } from './env.mjs';
-import { versSsml, versTexte } from '../src/lib/narration/normaliser.ts';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { versTexte } from '../src/lib/narration/normaliser.ts';
 
 const SORTIE = 'public/ecoute';
+const PONT = 'scripts/edge_tts_pont.py';
+
+/** Débit de lecture. Légèrement ralenti : une narration n'est pas un bulletin. */
+const DEBIT = '-4%';
 
 /* ── L'extrait ────────────────────────────────────────────────────────── */
 
@@ -58,231 +71,144 @@ const PARAGRAPHE =
   'd’érudits du XVIᵉ siècle — mais Romains.';
 
 const EXTRAIT_BRUT = `${INTRODUCTION}\n\n${PARAGRAPHE}`;
+const EXTRAIT_DIT = versTexte(EXTRAIT_BRUT);
 
 /* ── Arguments ────────────────────────────────────────────────────────── */
 
 const args = process.argv.slice(2);
-const iService = args.indexOf('--service');
-const SERVICE = iService !== -1 ? args[iService + 1] : 'azure';
 const LISTE_SEULEMENT = args.includes('--liste-seulement');
+const iLocale = args.indexOf('--locale');
+const LOCALE = iLocale !== -1 ? args[iLocale + 1] : null;
 
-const env = lireEnv();
+/* ── Appel du pont Python ─────────────────────────────────────────────── */
 
-/* ── Azure AI Speech ──────────────────────────────────────────────────── */
-
-const azure = {
-  nom: 'Azure AI Speech',
-
-  verifierCles() {
-    const manquantes = ['AZURE_SPEECH_KEY', 'AZURE_SPEECH_REGION'].filter((n) => !env[n]);
-    if (manquantes.length > 0) {
-      throw new Error(
-        `Variables absentes de .env : ${manquantes.join(', ')}.\n` +
-          'Crée une ressource « Speech » sur portal.azure.com (le palier gratuit F0 suffit),\n' +
-          'puis colle la clé et la région — par exemple francecentral — dans .env.'
-      );
-    }
-  },
-
-  /** Catalogue réel des voix, filtré sur le français de France. */
-  async voix() {
-    const region = env.AZURE_SPEECH_REGION;
-    const reponse = await fetch(
-      `https://${region}.tts.speech.microsoft.com/cognitiveservices/voices/list`,
-      { headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY } }
-    );
-    if (!reponse.ok) {
-      throw new Error(`Liste des voix refusée : ${reponse.status} ${await reponse.text()}`);
-    }
-    const toutes = await reponse.json();
-    return toutes
-      .filter((v) => v.Locale === 'fr-FR')
-      .map((v) => ({
-        id: v.ShortName,
-        nom: v.LocalName ?? v.DisplayName,
-        genre: v.Gender === 'Female' ? 'féminine' : 'masculine',
-        // Ces quatre champs viennent tels quels de la réponse d'Azure. Une
-        // première version fabriquait un champ « âge » à partir d'une
-        // propriété qui ne le contient pas : mieux vaut n'afficher que ce que
-        // le service dit réellement, et laisser l'oreille juger du reste.
-        styles: v.StyleList ?? [],
-        motsParMinute: v.WordsPerMinute ?? null,
-        type: v.VoiceType ?? '',
-        etat: v.Status ?? '',
-        multilingue: /Multilingual/.test(v.ShortName),
-      }))
-      .sort((a, b) => a.genre.localeCompare(b.genre) || a.id.localeCompare(b.id));
-  },
-
-  /**
-   * Synthétise l'extrait avec une voix.
-   *
-   * MP3 mono, et non Opus : Opus est deux fois plus léger, mais sa lecture
-   * dans un conteneur Ogg n'est pas fiable sur Safari et iOS — or la promesse
-   * est la même voix partout. L'AAC serait le meilleur compromis de poids,
-   * mais Azure ne le propose pas en sortie et le réencodage demanderait
-   * ffmpeg, absent de la machine de génération.
-   *
-   * Le débit est ici plus élevé que celui retenu pour la production (96 contre
-   * 48 kb/s) : pour juger d'un timbre, il ne faut pas que la compression
-   * s'ajoute au jugement.
-   */
-  async synthetiser(voix) {
-    const region = env.AZURE_SPEECH_REGION;
-    const ssml =
-      `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" ` +
-      `xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="fr-FR">` +
-      `<voice name="${voix.id}">` +
-      `<prosody rate="-4%">` +
-      `${versSsml(INTRODUCTION)}<break time="700ms"/>${versSsml(PARAGRAPHE)}` +
-      `</prosody></voice></speak>`;
-
-    const reponse = await fetch(
-      `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`,
-      {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
-          'Content-Type': 'application/ssml+xml',
-          'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
-          'User-Agent': 'nexus-echantillons',
-        },
-        body: ssml,
-      }
-    );
-
-    if (!reponse.ok) {
-      throw new Error(`Synthèse refusée pour ${voix.id} : ${reponse.status} ${await reponse.text()}`);
-    }
-
-    return { audio: Buffer.from(await reponse.arrayBuffer()), extension: 'mp3' };
-  },
-};
-
-/* ── ElevenLabs ───────────────────────────────────────────────────────── */
-
-const elevenlabs = {
-  nom: 'ElevenLabs',
-
-  verifierCles() {
-    if (!env.ELEVENLABS_API_KEY) {
-      throw new Error('ELEVENLABS_API_KEY absente de .env.');
-    }
-  },
-
-  async voix() {
-    const reponse = await fetch('https://api.elevenlabs.io/v1/voices', {
-      headers: { 'xi-api-key': env.ELEVENLABS_API_KEY },
+function pont(...arguments_) {
+  try {
+    return execFileSync('python', [PONT, ...arguments_], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'inherit'],
     });
-    if (!reponse.ok) {
-      throw new Error(`Liste des voix refusée : ${reponse.status} ${await reponse.text()}`);
-    }
-    const { voices } = await reponse.json();
-    return voices
-      .filter((v) => {
-        const langues = v.verified_languages ?? [];
-        const etiquettes = Object.values(v.labels ?? {}).join(' ').toLowerCase();
-        return (
-          langues.some((l) => l.language === 'fr') ||
-          etiquettes.includes('french') ||
-          etiquettes.includes('français')
-        );
-      })
-      .map((v) => ({
-        id: v.voice_id,
-        nom: v.name,
-        genre: (v.labels?.gender ?? '').toLowerCase().startsWith('f') ? 'féminine' : 'masculine',
-        age: v.labels?.age ?? '',
-        styles: [v.labels?.description ?? ''].filter(Boolean),
-        multilingue: true,
-      }));
-  },
-
-  async synthetiser(voix) {
-    const reponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voix.id}?output_format=mp3_44100_64`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': env.ELEVENLABS_API_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // Pas de SSML : ElevenLabs ne le lit pas. On envoie donc la sortie
-          // texte du normaliseur, où les sigles sont épelés en clair.
-          text: versTexte(EXTRAIT_BRUT),
-          model_id: 'eleven_multilingual_v2',
-        }),
-      }
-    );
-    if (!reponse.ok) {
-      throw new Error(`Synthèse refusée pour ${voix.nom} : ${reponse.status} ${await reponse.text()}`);
-    }
-    return { audio: Buffer.from(await reponse.arrayBuffer()), extension: 'mp3' };
-  },
-};
-
-const SERVICES = { azure, elevenlabs };
+  } catch (erreur) {
+    console.error('');
+    console.error('Le pont Python a echoue.');
+    console.error('Si edge-tts n est pas installe :  python -m pip install edge-tts');
+    throw erreur;
+  }
+}
 
 /* ── Exécution ────────────────────────────────────────────────────────── */
 
-const adaptateur = SERVICES[SERVICE];
-if (!adaptateur) {
-  console.error(`Service inconnu : ${SERVICE}. Disponibles : ${Object.keys(SERVICES).join(', ')}.`);
-  process.exit(1);
-}
-
-console.log(`Service : ${adaptateur.nom}`);
-console.log(`Extrait : ${EXTRAIT_BRUT.length} signes bruts, ${versTexte(EXTRAIT_BRUT).length} apres normalisation.`);
+console.log('Service : edge-tts (voix neuronales Microsoft, sans compte ni cle)');
+console.log(
+  `Extrait : ${EXTRAIT_BRUT.length} signes bruts, ${EXTRAIT_DIT.length} apres normalisation.`
+);
 console.log('');
 
-try {
-  adaptateur.verifierCles();
-} catch (erreur) {
-  console.error(String(erreur.message));
-  process.exit(1);
+let voix = JSON.parse(pont('voix'));
+if (LOCALE) voix = voix.filter((v) => v.locale === LOCALE);
+
+const parLocale = new Map();
+for (const v of voix) {
+  if (!parLocale.has(v.locale)) parLocale.set(v.locale, []);
+  parLocale.get(v.locale).push(v);
 }
 
-const voix = await adaptateur.voix();
-console.log(`${voix.length} voix francaises proposees par le service :`);
-for (const v of voix) {
-  const cadence = v.motsParMinute ? `${v.motsParMinute} mots/min` : '';
-  console.log(
-    `  ${v.id.padEnd(38)} ${v.genre.padEnd(10)} ${(v.multilingue ? 'multilingue' : '').padEnd(12)} ` +
-      `${cadence.padEnd(14)} ${(v.styles ?? []).slice(0, 3).join(', ')}`
-  );
+console.log(`${voix.length} voix francaises dans le catalogue :`);
+for (const [locale, liste] of parLocale) {
+  console.log(`  ${locale}  (${liste.length})`);
+  for (const v of liste) {
+    console.log(
+      `    ${v.id.padEnd(34)} ${v.genre.padEnd(10)} ` +
+        `${(v.multilingue ? 'multilingue' : '').padEnd(12)} ${v.personnalites.join(', ')}`
+    );
+  }
 }
 console.log('');
 
 if (LISTE_SEULEMENT) {
-  console.log('Liste seulement : aucune synthese, aucun caractere facture.');
+  console.log('Liste seulement : aucune synthese.');
   process.exit(0);
 }
 
-const cout = (voix.length * versTexte(EXTRAIT_BRUT).length) / 1_000_000;
-console.log(
-  `Synthese de ${voix.length} echantillons, soit environ ${Math.round(cout * 1_000_000).toLocaleString('fr-FR')} caracteres factures.`
-);
-console.log('');
+/* ── Synthèse ─────────────────────────────────────────────────────────── */
 
 mkdirSync(SORTIE, { recursive: true });
 
-const manifeste = { service: adaptateur.nom, genere: new Date().toISOString(), extrait: { introduction: INTRODUCTION, paragraphe: PARAGRAPHE, normalise: versTexte(EXTRAIT_BRUT) }, voix: [] };
-
-for (const v of voix) {
-  try {
-    const { audio, extension } = await adaptateur.synthetiser(v);
-    const fichier = `${v.id.replace(/[^\w.-]/g, '_')}.${extension}`;
-    writeFileSync(`${SORTIE}/${fichier}`, audio);
-    manifeste.voix.push({ ...v, fichier, octets: audio.length });
-    console.log(`  OK     ${v.id.padEnd(38)} ${(audio.length / 1024).toFixed(0)} ko`);
-  } catch (erreur) {
-    console.log(`  ECHEC  ${v.id.padEnd(38)} ${String(erreur.message).slice(0, 90)}`);
+// Les anciens échantillons sont retirés : garder un fichier orphelin dont
+// aucune voix ne parle plus donnerait une page d'écoute trompeuse.
+for (const fichier of readdirSync(SORTIE)) {
+  if (/\.(mp3|reperes\.json)$/.test(fichier) || fichier === 'manifeste.json') {
+    rmSync(join(SORTIE, fichier));
   }
 }
 
+const travail = {
+  sortie: SORTIE,
+  debit: DEBIT,
+  taches: voix.map((v) => ({
+    voix: v.id,
+    fichier: v.id,
+    texte: EXTRAIT_DIT,
+    // Les repères ne sont demandés que pour la première voix de fr-FR : ils
+    // pèsent, ils sont identiques en structure d'une voix à l'autre, et ils ne
+    // servent ici qu'à prouver que le surlignage est réalisable.
+    reperes: v.id === 'fr-FR-DeniseNeural',
+  })),
+};
+
+const fichierTravail = join(tmpdir(), `nexus-echantillons-${process.pid}.json`);
+writeFileSync(fichierTravail, JSON.stringify(travail), 'utf8');
+
+console.log(`Synthese de ${voix.length} echantillons, debit ${DEBIT} :`);
+let resultats;
+try {
+  resultats = JSON.parse(pont('synthese', fichierTravail));
+} finally {
+  rmSync(fichierTravail, { force: true });
+}
+
+/* ── Manifeste ────────────────────────────────────────────────────────── */
+
+const reussis = resultats.filter((r) => !r.erreur);
+
+const manifeste = {
+  service: 'edge-tts (voix neuronales Microsoft, sans compte)',
+  genere: new Date().toISOString(),
+  debit: DEBIT,
+  extrait: {
+    introduction: INTRODUCTION,
+    paragraphe: PARAGRAPHE,
+    normalise: EXTRAIT_DIT,
+  },
+  voix: reussis.map((r) => {
+    const descripteur = voix.find((v) => v.id === r.voix);
+    return {
+      id: r.voix,
+      nom: descripteur.nom,
+      locale: descripteur.locale,
+      genre: descripteur.genre,
+      multilingue: descripteur.multilingue,
+      personnalites: descripteur.personnalites,
+      fichier: r.fichier,
+      octets: r.octets,
+      reperesFichier: r.reperesFichier ?? null,
+      mots: r.mots,
+      phrases: r.phrases,
+    };
+  }),
+};
+
 writeFileSync(`${SORTIE}/manifeste.json`, JSON.stringify(manifeste, null, 1), 'utf8');
 
+const octets = reussis.reduce((n, r) => n + r.octets, 0);
 console.log('');
-console.log(`${manifeste.voix.length} echantillon(s) dans ${SORTIE}/`);
-console.log('Page d ecoute : /ecoute/ sur le deploiement de previsualisation.');
+console.log(
+  `${reussis.length} echantillon(s) sur ${voix.length}, ${(octets / 1024).toFixed(0)} ko au total, dans ${SORTIE}/`
+);
+const echoues = resultats.filter((r) => r.erreur);
+if (echoues.length > 0) {
+  console.log(`${echoues.length} echec(s) :`);
+  for (const r of echoues) console.log(`  ${r.voix} — ${r.erreur}`);
+}
+console.log('Page d ecoute : /ecoute/');
