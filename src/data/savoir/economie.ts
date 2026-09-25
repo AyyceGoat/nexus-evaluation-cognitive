@@ -45,7 +45,7 @@ export const articlesEconomie: ArticlesDuDomaine = {
       titre: 'Ce que la séquence 2020-2024 a montré',
       paragraphes: [
         'En 2020, les banques centrales ont réagi à la pandémie par des baisses de taux immédiates et des achats d’actifs massifs, évitant une crise financière en plus de la crise sanitaire. En 2021, l’inflation est revenue dans les pays riches à des niveaux oubliés depuis quarante ans, sous l’effet combiné des ruptures d’approvisionnement, du rebond de la demande et, en Europe, du choc énergétique de 2022.',
-        'La réaction a été tardive, ce que la plupart des institutions concernées ont reconnu depuis : l’inflation a d’abord été qualifiée de transitoire. Puis le resserrement a été le plus rapide depuis les années 1980 — la Réserve fédérale portant son taux d’une fourchette de 0-0,25 % à 5,25-5,50 % en dix-sept mois, jusqu’en juillet 2023. La leçon retenue est ancienne et coûte cher à réapprendre : les banques centrales voient l’inflation avec retard, et leurs remèdes agissent avec retard.',
+        'La réaction a été tardive, ce que la plupart des institutions concernées ont reconnu depuis : l’inflation a d’abord été qualifiée de transitoire. Puis le resserrement a été le plus rapide depuis les années 1980 — la Réserve fédérale portant son taux directeur d’une fourchette proche de zéro à une fourchette de 5,25 à 5,50 % en dix-sept mois, jusqu’en juillet 2023. La leçon retenue est ancienne et coûte cher à réapprendre : les banques centrales voient l’inflation avec retard, et leurs remèdes agissent avec retard.',
       ],
     },
     {

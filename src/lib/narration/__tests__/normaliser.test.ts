@@ -137,6 +137,74 @@ describe('ères, fourchettes, unités', () => {
   });
 });
 
+describe('formules, signes et fourchettes', () => {
+  // Ces cas ont tous ete trouves par le controle des caracteres non traites de
+  // `verifie-narration.mjs`, et non par relecture : un signe rare ne se voit
+  // pas a l'oeil, il s'entend.
+
+  it('dit la formule de l’intérêt composé', () => {
+    expect(versTexte('La formule est C × (1 + t)ⁿ.')).toBe(
+      'La formule est C multiplié par un plus t, le tout à la puissance n.'
+    );
+  });
+
+  it('dit le carré de l’équation d’Einstein', () => {
+    expect(versTexte('ce que résume E = mc².')).toBe('ce que résume E égale m c au carré.');
+  });
+
+  it('ne prononce pas la barre oblique des protocoles ni des unités', () => {
+    expect(versTexte('les protocoles TCP/IP')).toBe('les protocoles T C P, I P');
+    expect(versTexte('à 5 km/h dans un train')).toBe('à 5 kilomètres par heure dans un train');
+  });
+
+  it('détache le nombre d’une référence à sigle', () => {
+    // « NSC-68 » laissait un trait d'union colle au sigle epele, qui
+    // s'entendait « ce tiret soixante-huit ».
+    expect(versTexte('le document NSC-68')).toBe('le document enne esse cé 68');
+  });
+
+  it('ramène le nom polonais à une graphie prononçable en français', () => {
+    expect(versTexte('Maria Skłodowska naît')).toBe('Maria Sklodowska naît');
+  });
+
+  it('dit la fourchette à cheval sur les deux ères', () => {
+    // Traitee en entier : une fois « av. J.-C. » developpe, plus aucun chiffre
+    // ne borde le tiret et la regle des fourchettes ne peut plus s'appliquer.
+    expect(versTexte('Sénèque (vers 4 av. J.-C. – 65 ap. J.-C.)')).toContain(
+      'vers 4 avant Jésus-Christ à 65 après Jésus-Christ'
+    );
+  });
+
+  it('accorde la fourchette à la préposition qui précède', () => {
+    // Le francais impose trois formes, et une regle unique se trompait sur deux.
+    expect(versTexte('entre 250-300 wattheures')).toBe('entre 250 et 300 wattheures');
+    expect(versTexte('Épictète (vers 50-135)')).toContain('vers 50 à 135');
+    expect(versTexte('de 1840-1870 tout change')).toBe('de 1840 à 1870 tout change');
+    expect(versTexte('la guerre froide 1947-1991')).toBe('la guerre froide de 1947 à 1991');
+  });
+
+  it('ne coupe pas une fourchette décimale au mauvais endroit', () => {
+    // Le motif general attrapait « 25-5 » au milieu de « 5,25-5,50 ».
+    expect(versTexte('de 5,25-5,50 %')).toBe('de 5,25 à 5,50 pour cent');
+    expect(versTexte('de 0-0,25 %')).toBe('de 0 à 0,25 pour cent');
+  });
+
+  it('ne laisse aucun signe indicible sur les cas du corpus', () => {
+    const dicible = /^[ -~À-ÿŒœ’…°\n]*$/;
+    const cas = [
+      'La formule est C × (1 + t)ⁿ.',
+      'ce que résume E = mc².',
+      'La concentration de CO₂ dans l’atmosphère',
+      'Maria Skłodowska',
+      'au XIXᵉ siècle et au Iᵉʳ siècle',
+      'Sénèque (vers 4 av. J.-C. – 65 ap. J.-C.)',
+    ];
+    for (const c of cas) {
+      expect(versTexte(c), c).toMatch(dicible);
+    }
+  });
+});
+
 describe('ponctuation pour l’oreille', () => {
   it('remplace le tiret cadratin par une virgule', () => {
     expect(versTexte('un fait — et non une opinion — compte')).toBe(

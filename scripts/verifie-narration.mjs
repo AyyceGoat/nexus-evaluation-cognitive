@@ -59,7 +59,18 @@ let signesTexte = 0;
 let signesSsml = 0;
 let mots = 0;
 const siglesTrouves = new Map();
+const signesInconnus = new Map();
 const problemes = [];
+
+/**
+ * Ce qu'une synthese vocale francaise sait dire.
+ *
+ * Latin de base, lettres accentuees du francais, ligature oe, apostrophe
+ * typographique, points de suspension, degre. Tout le reste doit avoir ete
+ * traduit par le normaliseur.
+ */
+const CARACTERES_DICIBLES =
+  /[ -~À-ÿŒœ’…°\n]/;
 
 /** Tout mot en capitales d'au moins deux signes, hors chiffres romains traités. */
 const MOTIF_SIGLE = /\b[A-Z][A-Z0-9]{1,6}\b/g;
@@ -84,6 +95,19 @@ for (const sujet of extendedKnowledgeItems) {
       for (const sigle of clair.match(MOTIF_SIGLE) ?? []) {
         if (SIGLES[sigle]) continue;
         siglesTrouves.set(sigle, (siglesTrouves.get(sigle) ?? 0) + 1);
+      }
+
+      // Tout signe que la synthèse ne saurait pas dire.
+      //
+      // Ce contrôle a trouvé quatre défauts qu'aucune relecture n'avait vus :
+      // la formule « C × (1 + t)ⁿ » mutilée en « C ×, 1 + t,ⁿ », le carré de
+      // « E = mc² » muet, la barre oblique de « TCP/IP » prononcée, et le « ł »
+      // polonais de Skłodowska. Il vaut mieux qu'une relecture, parce qu'un
+      // caractère rare se remarque à l'oreille et jamais à l'œil.
+      for (const signe of clair) {
+        if (!CARACTERES_DICIBLES.test(signe)) {
+          signesInconnus.set(signe, (signesInconnus.get(signe) ?? 0) + 1);
+        }
       }
     }
   }
@@ -118,6 +142,18 @@ for (const debit of DEBITS) {
       `${(total / 1024 / 1024).toFixed(0)} Mo pour une voix   ` +
       `${((total * 2) / 1024 / 1024).toFixed(0)} Mo pour deux`
   );
+}
+console.log('');
+
+console.log('── Signes que la synthese ne saurait pas dire ──────────────────');
+if (signesInconnus.size === 0) {
+  console.log('Aucun : tout est traduit par le normaliseur.');
+} else {
+  for (const [signe, n] of [...signesInconnus].sort((a, b) => b[1] - a[1])) {
+    const point = signe.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+    console.log(`  U+${point}  ${JSON.stringify(signe)}  ${n} occurrence(s)`);
+  }
+  problemes.push(`${signesInconnus.size} signe(s) non traduit(s) pour l'oral`);
 }
 console.log('');
 
