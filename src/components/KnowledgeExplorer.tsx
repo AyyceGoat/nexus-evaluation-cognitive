@@ -10,6 +10,8 @@ import {
   prechargerDomaine,
   type SectionArticle,
 } from '../data/savoir';
+import { LecteurNarration } from './savoir/LecteurNarration';
+import type { SegmentAudio } from '../lib/narration/stockage';
 import {
   BookOpen,
   Sparkles,
@@ -373,6 +375,23 @@ function Article({ sujet }: { sujet: ExtendedKnowledgeItem }) {
   );
   const [echec, setEchec] = useState(false);
 
+  /**
+   * Passage en cours de lecture à voix haute, ou `null` à l'arrêt.
+   *
+   * Le lecteur ne connaît pas la mise en page de l'article : il remonte le
+   * segment, et c'est ici qu'on décide comment le montrer. Le surlignage est
+   * exact au paragraphe, parce que chaque paragraphe a été synthétisé comme un
+   * segment distinct — son décalage dans le fichier n'est donc pas calculé
+   * après coup, il est donné par le découpage.
+   */
+  const [segmentLu, setSegmentLu] = useState<SegmentAudio | null>(null);
+
+  const lu = (type: SegmentAudio['type'], section: number, paragraphe: number) =>
+    segmentLu !== null &&
+    segmentLu.type === type &&
+    segmentLu.section === section &&
+    segmentLu.paragraphe === paragraphe;
+
   useEffect(() => {
     const deja = articleEnMemoire(sujet.domainId, sujet.id);
     if (deja) {
@@ -425,6 +444,11 @@ function Article({ sujet }: { sujet: ExtendedKnowledgeItem }) {
 
   return (
     <div>
+      {/* Écoute de l'article. Placée avant le sommaire : quelqu'un qui n'a pas
+          le courage de lire huit cents mots doit trouver le bouton tout de
+          suite, pas après avoir fait défiler le plan. */}
+      <LecteurNarration sujetId={sujet.id} onSegment={setSegmentLu} />
+
       {/* Sommaire : c'est ce qui rend l'article parcourable avant d'être lu. */}
       <nav aria-label="Sommaire de l’article" className="mb-8 rounded-2 bg-ardoise/40 p-4 sm:p-5">
         <p className="mb-2 text-micro font-semibold tracking-wide text-brume uppercase">
@@ -448,13 +472,28 @@ function Article({ sujet }: { sujet: ExtendedKnowledgeItem }) {
       <div className="flex flex-col gap-8">
         {sections.map((section, index) => (
           <section key={section.titre} id={ancre(index)} className="scroll-mt-24">
-            <h2 className="mb-3 font-titre text-t2 text-craie">{section.titre}</h2>
+            <h2
+              className={`mb-3 rounded-1 font-titre text-t2 transition-colors ${
+                lu('titre', index, -1)
+                  ? 'bg-mesure/10 px-3 py-1 text-craie shadow-[inset_2px_0_0_0_var(--color-mesure)]'
+                  : 'text-craie'
+              }`}
+            >
+              {section.titre}
+            </h2>
             <div className="flex flex-col gap-4">
               {/* Clé par position : la liste est statique, et une clé dérivée du
                   texte casserait si deux paragraphes d'une même section
                   commençaient pareil — ce qu'aucun contrôle ne garantit. */}
               {section.paragraphes.map((paragraphe, rang) => (
-                <p key={rang} className="mesure-texte text-corps text-texte">
+                <p
+                  key={rang}
+                  className={`mesure-texte rounded-1 text-corps transition-colors ${
+                    lu('paragraphe', index, rang)
+                      ? 'bg-mesure/10 px-3 py-1 text-craie shadow-[inset_2px_0_0_0_var(--color-mesure)]'
+                      : 'text-texte'
+                  }`}
+                >
                   {paragraphe}
                 </p>
               ))}

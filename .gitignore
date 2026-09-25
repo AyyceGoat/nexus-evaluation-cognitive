@@ -41,3 +41,10 @@ public/ecoute/*.reperes.json
 public/ecoute/manifeste.json
 public/ecoute/articles/*.mp3
 public/ecoute/articles/*.json
+
+# Audio des articles : etape de fabrication. La destination est Supabase
+# Storage, et 281 Mo n'ont rien a faire dans l'historique Git ni dans un
+# deploiement Netlify.
+audio-genere/
+audio-genere.log
+audio-genere.pid

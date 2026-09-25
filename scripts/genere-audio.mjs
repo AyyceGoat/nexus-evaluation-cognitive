@@ -28,10 +28,11 @@
  *   node scripts/genere-audio.mjs --voix fr-FR-VivienneMultilingualNeural --articles hist_chute_rome,psy_dopamine
  *   node scripts/genere-audio.mjs --voix ... --tous
  *   node scripts/genere-audio.mjs --voix ... --articles ... --a-blanc
+ *   node scripts/genere-audio.mjs --voix ... --tous --sortie audio-genere
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { construireNarration, signesDits } from '../src/lib/narration/script.ts';
@@ -44,9 +45,21 @@ import { articlesScience } from '../src/data/savoir/science.ts';
 import { articlesPensee } from '../src/data/savoir/pensee.ts';
 import { articlesFigures } from '../src/data/savoir/figures.ts';
 
-const SORTIE = 'public/ecoute/articles';
 const PONT = 'scripts/edge_tts_pont.py';
 const DEBIT = '-4%';
+
+/**
+ * Dossier de sortie, HORS de `public/`.
+ *
+ * Les 281 Mo des trois voix ne doivent pas se trouver sous `public/` : Vite y
+ * copie tout dans `dist/`, et chaque déploiement embarquerait l'intégralité de
+ * l'audio. La destination réelle est Supabase Storage, servi par CDN ; ce
+ * dossier n'est qu'une étape de fabrication, ignorée par Git.
+ *
+ * `--sortie public/ecoute/articles` reste possible pour alimenter la page
+ * d'écoute avec quelques articles de démonstration.
+ */
+const SORTIE_DEFAUT = 'audio-genere';
 
 const TOUS_LES_ARTICLES = new Map();
 for (const articles of [
@@ -70,6 +83,7 @@ const lire = (nom) => {
 };
 
 const VOIX = lire('--voix');
+const SORTIE = lire('--sortie') ?? SORTIE_DEFAUT;
 const A_BLANC = args.includes('--a-blanc');
 const TOUS = args.includes('--tous');
 const demandes = TOUS
@@ -87,6 +101,7 @@ if (demandes.length === 0) {
 
 /* ── Contrôles avant de parler ────────────────────────────────────────── */
 
+const ignores = [];
 const problemes = [];
 for (const id of demandes) {
   if (!TOUS_LES_ARTICLES.has(id)) problemes.push(`« ${id} » : aucun article`);
@@ -100,10 +115,26 @@ if (problemes.length > 0) {
 
 /* ── Préparation ──────────────────────────────────────────────────────── */
 
-const plan = demandes.map((id) => {
-  const segments = construireNarration(TOUS_LES_ARTICLES.get(id), INTRODUCTIONS[id]);
-  return { id, segments, signes: signesDits(segments) };
-});
+const REPRENDRE = !args.includes('--refaire');
+
+const plan = demandes
+  .filter((id) => {
+    // Reprise apres interruption.
+    //
+    // La generation des trois voix dure des heures et s'interrompt : un flux
+    // suspendu, une coupure, un arret volontaire. Refaire ce qui est deja
+    // produit coute autant que de le produire, donc on saute les articles dont
+    // les deux fichiers existent deja. `--refaire` force la regeneration.
+    if (!REPRENDRE) return true;
+    const base = join(SORTIE, `${id}-${VOIX}`);
+    const dejaLa = existsSync(`${base}.mp3`) && existsSync(`${base}.json`);
+    if (dejaLa) ignores.push(id);
+    return !dejaLa;
+  })
+  .map((id) => {
+    const segments = construireNarration(TOUS_LES_ARTICLES.get(id), INTRODUCTIONS[id]);
+    return { id, segments, signes: signesDits(segments) };
+  });
 
 const totalSegments = plan.reduce((n, a) => n + a.segments.length, 0);
 const totalSignes = plan.reduce((n, a) => n + a.signes, 0);
@@ -111,6 +142,13 @@ const totalSignes = plan.reduce((n, a) => n + a.signes, 0);
 console.log(`Voix   : ${VOIX}`);
 console.log(`Debit  : ${DEBIT}`);
 console.log(`Plan   : ${plan.length} article(s), ${totalSegments} segments, ${totalSignes.toLocaleString('fr-FR')} signes`);
+if (ignores.length > 0) {
+  console.log(`Deja fait : ${ignores.length} article(s) ignore(s). --refaire pour les reprendre.`);
+}
+if (plan.length === 0) {
+  console.log('Rien a faire : tous les articles demandes existent deja pour cette voix.');
+  process.exit(0);
+}
 for (const a of plan) {
   console.log(`  ${a.id.padEnd(30)} ${String(a.segments.length).padStart(3)} segments  ${String(a.signes).padStart(6)} signes`);
 }

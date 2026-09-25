@@ -106,8 +106,26 @@ async def lister_voix() -> None:
     print(json.dumps(candidates, ensure_ascii=False, indent=1))
 
 
-async def une_tache(tache: dict, sortie: Path, debit: str) -> dict:
-    """Synthetise une tache, ecrit le MP3 et, si demande, les reperes."""
+# Duree maximale accordee a un segment, en secondes.
+#
+# Constate en exploitation : un segment s'est bloque treize minutes sans lever
+# la moindre erreur. La connexion restait ouverte et le flux ne rendait plus
+# rien, si bien que la generation entiere attendait. Sur trois mille segments,
+# ce cas n'est pas un accident mais une certitude.
+DELAI_SEGMENT = 45
+
+# Tentatives par segment. Un echec est presque toujours transitoire.
+TENTATIVES = 3
+
+# Pause entre deux segments, en secondes.
+#
+# Le service tolere mal une rafale soutenue. Une pause courte coute quelques
+# minutes sur l'ensemble et evite les blocages, ce qui est un bon echange.
+PAUSE = 0.25
+
+
+async def _synthetiser_une_fois(tache: dict, debit: str) -> tuple:
+    """Un essai de synthese. Rend (audio, mots, phrases)."""
     veut_reperes = bool(tache.get("reperes"))
 
     parleur = edge_tts.Communicate(
@@ -115,6 +133,8 @@ async def une_tache(tache: dict, sortie: Path, debit: str) -> dict:
         tache["voix"],
         rate=debit,
         boundary="WordBoundary" if veut_reperes else "SentenceBoundary",
+        connect_timeout=15,
+        receive_timeout=30,
     )
 
     morceaux = bytearray()
@@ -143,8 +163,41 @@ async def une_tache(tache: dict, sortie: Path, debit: str) -> dict:
                 }
             )
 
+    if len(morceaux) == 0:
+        raise RuntimeError("aucun octet audio recu")
+
+    return bytes(morceaux), mots, phrases
+
+
+async def une_tache(tache: dict, sortie: Path, debit: str) -> dict:
+    """
+    Synthetise une tache, avec delai et reprise.
+
+    Le delai est la piece essentielle : sans lui, un flux qui ne rend plus rien
+    immobilise la generation sans jamais echouer. `asyncio.wait_for` transforme
+    ce silence en erreur, que la boucle de reprise peut traiter.
+    """
+    veut_reperes = bool(tache.get("reperes"))
+
+    for essai in range(1, TENTATIVES + 1):
+        try:
+            audio, mots, phrases = await asyncio.wait_for(
+                _synthetiser_une_fois(tache, debit), timeout=DELAI_SEGMENT
+            )
+            break
+        except Exception as erreur:
+            # `TimeoutError` est une sous-classe d'`Exception` : la capturer
+            # separement serait redondant.
+            if essai == TENTATIVES:
+                raise RuntimeError(
+                    f"{TENTATIVES} tentatives echouees : {type(erreur).__name__} {erreur}"
+                ) from erreur
+            # Attente croissante : 1 s, puis 3 s.
+            await asyncio.sleep(1 + 2 * (essai - 1))
+
     fichier_audio = sortie / (tache["fichier"] + ".mp3")
-    fichier_audio.write_bytes(bytes(morceaux))
+    fichier_audio.write_bytes(audio)
+    morceaux = audio
 
     resultat = {
         "voix": tache["voix"],
@@ -172,7 +225,9 @@ async def synthetiser(chemin_travail: str) -> None:
     debit = travail.get("debit", "+0%")
 
     resultats = []
-    for tache in travail["taches"]:
+    for rang, tache in enumerate(travail["taches"]):
+        if rang > 0:
+            await asyncio.sleep(PAUSE)
         try:
             resultat = await une_tache(tache, sortie, debit)
             resultats.append(resultat)
