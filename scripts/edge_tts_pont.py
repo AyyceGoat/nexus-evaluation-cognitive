@@ -58,29 +58,52 @@ except ImportError:
 
 
 async def lister_voix() -> None:
-    """Imprime en JSON les voix francaises, telles que le service les declare."""
+    """
+    Imprime en JSON les voix candidates, telles que le service les declare.
+
+    Deux familles sont retenues :
+
+      - toutes les voix dont la langue est le francais, quel que soit le pays ;
+      - toutes les voix MULTILINGUES, y compris celles dont la langue de base
+        n'est pas le francais.
+
+    La seconde famille merite l'essai parce que ces voix partagent un meme
+    modele, nettement plus naturel en lecture longue que les voix monolingues :
+    sur les treize voix francaises, les deux seules multilingues se sont
+    imposees a l'ecoute. Reste a entendre si l'accent de leur langue de base
+    s'entend quand elles lisent du francais — ce que seule l'oreille tranche.
+    """
     toutes = await edge_tts.list_voices()
 
-    francaises = []
+    candidates = []
     for v in toutes:
         nom_court = v.get("ShortName", "")
-        if not nom_court.startswith("fr-"):
+        est_francaise = nom_court.startswith("fr-")
+        est_multilingue = "Multilingual" in nom_court
+
+        if not est_francaise and not est_multilingue:
             continue
+
         etiquettes = v.get("VoiceTag", {}) or {}
-        francaises.append(
+        candidates.append(
             {
                 "id": nom_court,
-                "nom": nom_court.split("-")[-1].replace("Neural", ""),
+                "nom": nom_court.split("-")[-1]
+                .replace("MultilingualNeural", "")
+                .replace("Neural", ""),
                 "locale": v.get("Locale", ""),
                 "genre": "féminine" if v.get("Gender") == "Female" else "masculine",
                 "personnalites": etiquettes.get("VoicePersonalities", []) or [],
                 "scenarios": etiquettes.get("ContentCategories", []) or [],
-                "multilingue": "Multilingual" in nom_court,
+                "multilingue": est_multilingue,
+                # « francaise » : langue de base le francais. « multilingue » :
+                # modele multilingue dont la langue de base est autre.
+                "groupe": "francaise" if est_francaise else "multilingue",
             }
         )
 
-    francaises.sort(key=lambda x: (x["locale"], x["genre"], x["id"]))
-    print(json.dumps(francaises, ensure_ascii=False, indent=1))
+    candidates.sort(key=lambda x: (x["groupe"], x["locale"], x["genre"], x["id"]))
+    print(json.dumps(candidates, ensure_ascii=False, indent=1))
 
 
 async def une_tache(tache: dict, sortie: Path, debit: str) -> dict:

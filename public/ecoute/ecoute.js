@@ -26,7 +26,16 @@
     'fr-BE': 'Belgique',
     'fr-CH': 'Suisse',
     'fr-CA': 'Canada',
+    'de-DE': 'base allemande',
+    'en-US': 'base anglaise (États-Unis)',
+    'en-AU': 'base anglaise (Australie)',
+    'it-IT': 'base italienne',
+    'ko-KR': 'base coréenne',
+    'pt-BR': 'base portugaise (Brésil)',
   };
+
+  /** Ordre des locales multilingues, du plus au moins prometteur a priori. */
+  var ORDRE_MULTILINGUES = ['de-DE', 'en-US', 'en-AU', 'it-IT', 'pt-BR', 'ko-KR'];
 
   function texte(id, valeur) {
     var cible = document.getElementById(id);
@@ -129,13 +138,18 @@
     var deFrance = manifeste.voix.filter(function (v) {
       return v.locale === 'fr-FR';
     }).length;
+    var autresMulti = manifeste.voix.filter(function (v) {
+      return v.groupe === 'multilingue';
+    }).length;
 
     contenu.appendChild(
       paragraphe(
         manifeste.voix.length +
-          ' voix, dont ' +
+          ' voix : ' +
           deFrance +
-          ' de France. Service : ' +
+          ' de France, ' +
+          autresMulti +
+          ' multilingues d’une autre langue. Service : ' +
           manifeste.service +
           '. Débit ' +
           manifeste.debit +
@@ -146,9 +160,15 @@
       )
     );
 
+    familleFrancaise(manifeste);
+    familleMultilingue(manifeste);
+  }
+
+  /** Les voix dont la langue de base est le francais. */
+  function familleFrancaise(manifeste) {
     var locales = ORDRE_LOCALES.filter(function (l) {
       return manifeste.voix.some(function (v) {
-        return v.locale === l;
+        return v.locale === l && v.groupe === 'francaise';
       });
     });
 
@@ -168,7 +188,7 @@
         ['masculine', 'Masculines'],
       ].forEach(function (groupe) {
         var liste = manifeste.voix.filter(function (v) {
-          return v.locale === locale && v.genre === groupe[0];
+          return v.locale === locale && v.genre === groupe[0] && v.groupe === 'francaise';
         });
         if (liste.length === 0) return;
 
@@ -187,6 +207,64 @@
         });
         contenu.appendChild(ul);
       });
+    });
+  }
+
+  /**
+   * Les voix multilingues dont la langue de base n'est pas le francais.
+   *
+   * Elles partagent le modele de Vivienne et de Remy, nettement plus naturel
+   * en lecture longue que les voix monolingues. La question a trancher est la
+   * seule que l'oreille puisse trancher : l'accent de leur langue de base
+   * s'entend-il ?
+   */
+  function familleMultilingue(manifeste) {
+    var liste = manifeste.voix.filter(function (v) {
+      return v.groupe === 'multilingue';
+    });
+    if (liste.length === 0) return;
+
+    var separateur = document.createElement('h2');
+    separateur.style.marginTop = '3.5rem';
+    separateur.textContent = 'Voix multilingues d’une autre langue (' + liste.length + ')';
+    contenu.appendChild(separateur);
+
+    contenu.appendChild(
+      paragraphe(
+        'Même modèle que Vivienne et Rémy, mais avec une autre langue de base. Elles lisent ' +
+          'le français ; reste à entendre si leur accent d’origine s’y entend.',
+        'sous'
+      )
+    );
+
+    var locales = ORDRE_MULTILINGUES.filter(function (l) {
+      return liste.some(function (v) {
+        return v.locale === l;
+      });
+    });
+
+    locales.forEach(function (locale) {
+      var titre = document.createElement('h3');
+      titre.style.margin = '1.75rem 0 0.75rem';
+      titre.style.fontSize = '1rem';
+      titre.style.color = 'var(--brume)';
+      titre.style.fontWeight = '600';
+      titre.textContent = NOM_LOCALES[locale] || locale;
+      contenu.appendChild(titre);
+
+      var ul = document.createElement('ul');
+      ul.className = 'voix';
+      liste
+        .filter(function (v) {
+          return v.locale === locale;
+        })
+        .sort(function (a, b) {
+          return a.genre.localeCompare(b.genre) || a.nom.localeCompare(b.nom);
+        })
+        .forEach(function (v) {
+          ul.appendChild(carte(v));
+        });
+      contenu.appendChild(ul);
     });
   }
 

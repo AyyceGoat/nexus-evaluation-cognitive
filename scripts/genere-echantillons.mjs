@@ -77,6 +77,7 @@ const EXTRAIT_DIT = versTexte(EXTRAIT_BRUT);
 
 const args = process.argv.slice(2);
 const LISTE_SEULEMENT = args.includes('--liste-seulement');
+const SANS_MULTILINGUES = args.includes('--sans-multilingues');
 const iLocale = args.indexOf('--locale');
 const LOCALE = iLocale !== -1 ? args[iLocale + 1] : null;
 
@@ -107,21 +108,35 @@ console.log('');
 
 let voix = JSON.parse(pont('voix'));
 if (LOCALE) voix = voix.filter((v) => v.locale === LOCALE);
+if (SANS_MULTILINGUES) voix = voix.filter((v) => v.groupe === 'francaise');
 
-const parLocale = new Map();
-for (const v of voix) {
-  if (!parLocale.has(v.locale)) parLocale.set(v.locale, []);
-  parLocale.get(v.locale).push(v);
-}
+const francaises = voix.filter((v) => v.groupe === 'francaise');
+const multilingues = voix.filter((v) => v.groupe === 'multilingue');
 
-console.log(`${voix.length} voix francaises dans le catalogue :`);
-for (const [locale, liste] of parLocale) {
-  console.log(`  ${locale}  (${liste.length})`);
+console.log(
+  `${voix.length} voix candidates : ${francaises.length} de langue francaise, ` +
+    `${multilingues.length} multilingues d'une autre langue de base.`
+);
+
+for (const [titre, liste] of [
+  ['Langue francaise', francaises],
+  ['Multilingues, autre langue de base', multilingues],
+]) {
+  if (liste.length === 0) continue;
+  console.log('');
+  console.log(`  ${titre} (${liste.length})`);
+  const parLocale = new Map();
   for (const v of liste) {
-    console.log(
-      `    ${v.id.padEnd(34)} ${v.genre.padEnd(10)} ` +
-        `${(v.multilingue ? 'multilingue' : '').padEnd(12)} ${v.personnalites.join(', ')}`
-    );
+    if (!parLocale.has(v.locale)) parLocale.set(v.locale, []);
+    parLocale.get(v.locale).push(v);
+  }
+  for (const [locale, groupe] of parLocale) {
+    for (const v of groupe) {
+      console.log(
+        `    ${v.id.padEnd(34)} ${locale.padEnd(7)} ${v.genre.padEnd(10)} ` +
+          `${(v.multilingue ? 'multilingue' : '').padEnd(12)} ${v.personnalites.join(', ')}`
+      );
+    }
   }
 }
 console.log('');
@@ -150,10 +165,10 @@ const travail = {
     voix: v.id,
     fichier: v.id,
     texte: EXTRAIT_DIT,
-    // Les repères ne sont demandés que pour la première voix de fr-FR : ils
-    // pèsent, ils sont identiques en structure d'une voix à l'autre, et ils ne
+    // Les repères ne sont demandés que pour la voix retenue par défaut : ils
+    // pèsent, leur structure est identique d'une voix à l'autre, et ils ne
     // servent ici qu'à prouver que le surlignage est réalisable.
-    reperes: v.id === 'fr-FR-DeniseNeural',
+    reperes: v.id === 'fr-FR-VivienneMultilingualNeural',
   })),
 };
 
@@ -189,6 +204,7 @@ const manifeste = {
       locale: descripteur.locale,
       genre: descripteur.genre,
       multilingue: descripteur.multilingue,
+      groupe: descripteur.groupe,
       personnalites: descripteur.personnalites,
       fichier: r.fichier,
       octets: r.octets,
