@@ -39,3 +39,5 @@ verification/
 public/ecoute/*.mp3
 public/ecoute/*.reperes.json
 public/ecoute/manifeste.json
+public/ecoute/articles/*.mp3
+public/ecoute/articles/*.json
